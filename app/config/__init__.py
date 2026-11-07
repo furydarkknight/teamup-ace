@@ -12,7 +12,20 @@ SECRET_KEY = os.getenv("SECRET_KEY", "teamup-secret-jwt-key-2026-hackathon-ace")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'teamup.db'}")
+if os.getenv("VERCEL"):
+    import shutil
+    tmp_db = Path("/tmp/teamup.db")
+    src_db = BASE_DIR / "teamup.db"
+    if src_db.exists() and not tmp_db.exists():
+        try:
+            shutil.copyfile(src_db, tmp_db)
+            print("[Vercel] Successfully copied teamup.db to /tmp/teamup.db")
+        except Exception as e:
+            print(f"[Vercel] Warning copying teamup.db to /tmp: {e}")
+    DATABASE_URL = f"sqlite:///{tmp_db}"
+else:
+    DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'teamup.db'}")
+
 MATCHER_TYPE = os.getenv("MATCHER", "rule_based").lower()  # "rule_based" or "ml"
 
 # Verified email domains

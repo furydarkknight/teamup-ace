@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: teamup-ace
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MATCHER
+        value: rule_based
+      - key: APP_NAME
+        value: TeamUp by ACE
+      - key: APP_TAGLINE
+        value: AI-Powered Team Finder & Collaboration Platform for Hackathons
+      - key: SECRET_KEY
+        generateValue: true
