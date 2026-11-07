@@ -2,6 +2,11 @@
 ### The Unified AI-Powered Student Opportunity, Team Formation & Career Platform
 *Prototype & Moat for the ACE TeamUp Challenge (International Hackathon 5.0)*
 
+[![Live Deployment](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://teamup-ace.onrender.com)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/furydarkknight/teamup-ace)
+
+🌐 **Live URL**: [https://teamup-ace.onrender.com](https://teamup-ace.onrender.com)
+
 ---
 
 ## 🌟 Vision & Platform Scope
@@ -45,13 +50,14 @@ python seed_expansion.py
 ```bash
 python run.py
 ```
-Open **`http://localhost:8000`** in your browser!
+Open **`http://localhost:8000`** in your browser, or visit the live cloud deployment!
 
-- **Web Application**: `http://localhost:8000`
-- **Swagger Interactive API Docs**: `http://localhost:8000/docs`
+- **Live Production URL**: [https://teamup-ace.onrender.com](https://teamup-ace.onrender.com)
+- **Local Web Application**: `http://localhost:8000`
+- **Swagger Interactive API Docs**: `http://localhost:8000/docs` (or `https://teamup-ace.onrender.com/docs`)
 - **ReDoc Interactive Docs**: `http://localhost:8000/redoc`
-- **Public Certificate Verification**: `http://localhost:8000/verify/ACE-CERT-2026-F891`
-- **Public Digital Portfolio**: `http://localhost:8000/u/aaravsharma`
+- **Public Certificate Verification**: `https://teamup-ace.onrender.com/verify/ACE-CERT-2026-F891`
+- **Public Digital Portfolio**: `https://teamup-ace.onrender.com/u/aaravsharma`
 
 ---
 
@@ -189,6 +195,7 @@ python test_bugfix.py
 
 ## ☁️ Deployment
 
+- **Live Production URL on Render**: [https://teamup-ace.onrender.com](https://teamup-ace.onrender.com)
 - **Render Blueprint**: Pre-configured `render.yaml` and `Procfile` ready for zero-downtime deployment.
 - **Vercel Serverless**: Configured `vercel.json` and `api/index.py` with automatic `/tmp` SQLite mirroring.
 - **GitHub Repository**: [https://github.com/furydarkknight/teamup-ace.git](https://github.com/furydarkknight/teamup-ace.git)
