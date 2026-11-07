@@ -97,7 +97,7 @@ def book_mentor_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    mentor_prof = db.query(MentorProfile).filter(MentorProfile.user_id == req.mentor_id).first()
+    mentor_prof = db.query(MentorProfile).filter((MentorProfile.user_id == req.mentor_id) | (MentorProfile.id == req.mentor_id)).first()
     if not mentor_prof:
         raise HTTPException(status_code=404, detail="Mentor not found")
 
@@ -155,7 +155,7 @@ def request_referral(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    alumni = db.query(AlumniProfile).filter(AlumniProfile.user_id == req.alumni_id).first()
+    alumni = db.query(AlumniProfile).filter((AlumniProfile.user_id == req.alumni_id) | (AlumniProfile.id == req.alumni_id)).first()
     if not alumni:
         raise HTTPException(status_code=404, detail="Alumni profile not found")
 

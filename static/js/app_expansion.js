@@ -1542,3 +1542,581 @@ async function loadTeamTasks(teamId) {
         });
     } catch (err) {}
 }
+
+
+// ==========================================
+// EXPANSION MODALS & ACTION HANDLERS (PHASES 1-8)
+// ==========================================
+
+// --- 1. MENTOR BOOKING ---
+function openBookMentorModal(mentorUserId, mentorName) {
+    if (!state.token) { openModal('auth-modal'); return; }
+    const nameInput = document.getElementById('book-mentor-name');
+    const idInput   = document.getElementById('book-mentor-id');
+    if (nameInput) nameInput.value = mentorName;
+    if (idInput)   idInput.value   = mentorUserId;
+    openModal('book-mentor-modal');
+}
+
+async function handleBookMentorSubmit(e) {
+    e.preventDefault();
+    const mentorId = document.getElementById('book-mentor-id') ?
+        document.getElementById('book-mentor-id').value : null;
+    const slot     = document.getElementById('book-mentor-slot').value;
+    const topic    = document.getElementById('book-mentor-topic').value.trim();
+    if (!topic) { showToast('Please enter a session topic.', 'warning'); return; }
+    try {
+        const res = await fetch(`${API_BASE}/community/mentors/book`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+            body: JSON.stringify({ mentor_id: parseInt(mentorId), scheduled_at: slot, topic: topic })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Booking failed');
+        closeModal('book-mentor-modal');
+        showToast(`Session booked with mentor for "${slot}"! 🎓`, 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 2. REFERRAL REQUEST ---
+function openRequestReferralModal(alumniId, alumniName, company) {
+    if (!state.token) { openModal('auth-modal'); return; }
+    const nameEl = document.getElementById('ref-alumni-name');
+    const compEl = document.getElementById('ref-company-name');
+    const idEl   = document.getElementById('ref-alumni-id-hidden');
+    const jobEl  = document.getElementById('ref-job-url');
+    const resEl  = document.getElementById('ref-resume-link');
+    const msgEl  = document.getElementById('ref-message');
+
+    if (nameEl) nameEl.textContent = alumniName;
+    if (compEl) compEl.textContent = company;
+    if (idEl)   idEl.value         = alumniId;
+    if (jobEl)  jobEl.value        = '';
+    if (resEl)  resEl.value        = '';
+    if (msgEl)  msgEl.value        = '';
+    openModal('referral-request-modal');
+}
+
+async function handleReferralRequestSubmit(e) {
+    e.preventDefault();
+    const alumniId   = document.getElementById('ref-alumni-id-hidden').value;
+    const jobUrl     = document.getElementById('ref-job-url').value.trim();
+    const resumeLink = document.getElementById('ref-resume-link').value.trim();
+    const message    = document.getElementById('ref-message').value.trim();
+    if (!jobUrl || !resumeLink || !message) {
+        showToast('Please complete all referral request fields.', 'warning');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/community/alumni/referral-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+            body: JSON.stringify({
+                alumni_id: parseInt(alumniId),
+                job_url: jobUrl,
+                resume_link: resumeLink,
+                note: message
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Referral request failed');
+        closeModal('referral-request-modal');
+        showToast('Referral request sent! The alumni will review it shortly. 🤝', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 3. FORUM THREAD CREATE ---
+function openForumCreateModal() {
+    if (!state.token) { openModal('auth-modal'); return; }
+    const titleEl = document.getElementById('forum-create-title');
+    const bodyEl  = document.getElementById('forum-create-body');
+    if (titleEl) titleEl.value = '';
+    if (bodyEl)  bodyEl.value  = '';
+    openModal('forum-create-modal');
+}
+
+async function handleForumCreateSubmit(e) {
+    e.preventDefault();
+    const title = document.getElementById('forum-create-title').value.trim();
+    const body  = document.getElementById('forum-create-body').value.trim();
+    const tag   = document.getElementById('forum-create-tag').value;
+    if (!title || !body) { showToast('Please fill in title and discussion content.', 'warning'); return; }
+    try {
+        const res = await fetch(`${API_BASE}/community/forum/threads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+            body: JSON.stringify({ title, content: body, skill_name: tag })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to post discussion');
+        closeModal('forum-create-modal');
+        showToast('Discussion posted! 💬', 'success');
+        showCommunityView();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 4. ORGANIZER: CREATE OPPORTUNITY ---
+async function handleCreateOpportunitySubmit(e) {
+    e.preventDefault();
+    if (!state.token) { openModal('auth-modal'); return; }
+    const title     = document.getElementById('create-opp-title').value.trim();
+    const oppType   = document.getElementById('create-opp-type').value;
+    const mode      = document.getElementById('create-opp-mode').value;
+    const deadline  = document.getElementById('create-opp-deadline').value.trim();
+    const prize     = document.getElementById('create-opp-prize').value.trim();
+    const skillsRaw = document.getElementById('create-opp-skills').value.trim();
+    const minTeam   = parseInt(document.getElementById('create-opp-team-min').value || '1');
+    const maxTeam   = parseInt(document.getElementById('create-opp-team-max').value || '4');
+    const desc      = document.getElementById('create-opp-desc').value.trim();
+
+    const skills = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+    try {
+        const res = await fetch(`${API_BASE}/portals/organizer/opportunities`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+            body: JSON.stringify({
+                title: title,
+                type: oppType,
+                description: desc,
+                skills: skills,
+                location_mode: mode,
+                deadline: deadline,
+                prize_pool: prize,
+                team_size_min: minTeam,
+                team_size_max: maxTeam
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to publish opportunity');
+        closeModal('create-opp-modal');
+        showToast(`Opportunity "${title}" published live! 🚀`, 'success');
+        showOrganizerPortalView();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 5. JOB ALERT CREATION ---
+async function handleCreateJobAlertSubmit(e) {
+    e.preventDefault();
+    if (!state.token) { openModal('auth-modal'); return; }
+    const keyword  = document.getElementById('alert-keyword').value.trim();
+    const role     = document.getElementById('alert-role').value;
+    const location = document.getElementById('alert-location').value;
+    const stipend  = document.getElementById('alert-min-stipend').value;
+
+    try {
+        const res = await fetch(`${API_BASE}/jobs/alerts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+            body: JSON.stringify({
+                keyword: keyword,
+                role: role,
+                location: location,
+                min_stipend: stipend
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to save job alert');
+        closeModal('job-alert-modal');
+        showToast('Job alert activated! You will receive in-app notifications for matches. 🔔', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 6. RESUME BUILDER: CREATE RESUME ---
+async function handleCreateResumeSubmit(e) {
+    e.preventDefault();
+    if (!state.token) { openModal('auth-modal'); return; }
+    const title    = document.getElementById('resume-title').value.trim() || 'My Resume';
+    const template = document.getElementById('resume-template').value;
+    const summary  = document.getElementById('resume-summary').value.trim();
+    const skillsRaw= document.getElementById('resume-skills').value.trim();
+    const skills   = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+    const expRole  = document.getElementById('resume-exp-role').value.trim();
+    const expOrg   = document.getElementById('resume-exp-org').value.trim();
+    const expDur   = document.getElementById('resume-exp-duration').value.trim();
+    const expDesc  = document.getElementById('resume-exp-desc').value.trim();
+
+    const eduDeg   = document.getElementById('resume-edu-degree').value.trim();
+    const eduCol   = document.getElementById('resume-edu-college').value.trim();
+    const eduYear  = document.getElementById('resume-edu-year').value.trim();
+
+    const experience = expRole ? [{ role: expRole, company: expOrg, duration: expDur, description: expDesc }] : [];
+    const education  = eduDeg  ? [{ degree: eduDeg, college: eduCol, year: eduYear }] : [];
+
+    try {
+        const res = await fetch(`${API_BASE}/resumes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+            body: JSON.stringify({
+                title: title,
+                template_name: template,
+                data: {
+                    summary: summary,
+                    skills: skills,
+                    experience: experience,
+                    education: education
+                }
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to create resume');
+        closeModal('resume-create-modal');
+        showToast(`Resume "${title}" created successfully! 📄`, 'success');
+        showMySpaceView();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 7. RESUME PREVIEW & DEFAULT ---
+async function previewResume(resumeId) {
+    try {
+        const res = await fetch(`${API_BASE}/resumes/${resumeId}`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        if (!res.ok) throw new Error('Could not load resume');
+        const r = await res.json();
+
+        const data = r.data || {};
+        const skills = data.skills || [];
+        const exp = data.experience || [];
+        const edu = data.education || [];
+
+        const existing = document.getElementById('resume-preview-modal-dyn');
+        if (existing) existing.remove();
+
+        const div = document.createElement('div');
+        div.id = 'resume-preview-modal-dyn';
+        div.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm';
+        div.innerHTML = `
+            <div class="glass-card w-full max-w-lg rounded-3xl border border-slate-800 p-6 space-y-4 max-h-[88vh] overflow-y-auto">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div>
+                        <h3 class="text-base font-bold text-white">${r.title || 'Resume Preview'}</h3>
+                        <p class="text-xs text-slate-400 capitalize">${r.template_name || 'Modern'} Template</p>
+                    </div>
+                    <button onclick="document.getElementById('resume-preview-modal-dyn').remove()" class="text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Summary</p>
+                        <p class="text-white leading-relaxed">${data.summary || 'No summary provided.'}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Skills</p>
+                        <div class="flex flex-wrap gap-1">
+                            ${skills.map(s => `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">${s}</span>`).join('') || '<span class="text-slate-500">None</span>'}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Experience</p>
+                        <div class="space-y-2">
+                            ${exp.map(x => `
+                                <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                                    <p class="font-bold text-white">${x.role || 'Role'} @ ${x.company || ''}</p>
+                                    <p class="text-[10px] text-slate-400">${x.duration || ''}</p>
+                                    <p class="text-slate-300 mt-1">${x.description || ''}</p>
+                                </div>
+                            `).join('') || '<span class="text-slate-500">No experience added.</span>'}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Education</p>
+                        <div class="space-y-1.5">
+                            ${edu.map(d => `
+                                <div class="p-2 rounded-xl bg-slate-900 border border-slate-800 flex justify-between">
+                                    <span class="font-semibold text-white">${d.degree || ''} — ${d.college || ''}</span>
+                                    <span class="text-slate-400 text-[10px]">${d.year || ''}</span>
+                                </div>
+                            `).join('') || '<span class="text-slate-500">No education added.</span>'}
+                        </div>
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-800 flex justify-end">
+                    <button onclick="document.getElementById('resume-preview-modal-dyn').remove()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function setDefaultResume(resumeId) {
+    try {
+        const res = await fetch(`${API_BASE}/resumes/${resumeId}/set-default`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Could not set default resume');
+        showToast('Default resume updated! ✅', 'success');
+        showMySpaceView();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 8. APPLICATION TIMELINE MODAL ---
+async function viewApplicationTimeline(appId) {
+    try {
+        const res = await fetch(`${API_BASE}/applications/${appId}`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        if (!res.ok) throw new Error('Could not load application details');
+        const a = await res.json();
+
+        const steps = a.status_timeline || [];
+        const statusColors = {
+            applied: 'bg-slate-800 text-slate-300',
+            under_review: 'bg-indigo-950 text-indigo-300 border border-indigo-700',
+            shortlisted: 'bg-amber-950 text-amber-300 border border-amber-700',
+            interview: 'bg-purple-950 text-purple-300 border border-purple-700',
+            offer: 'bg-emerald-950 text-emerald-300 border border-emerald-700',
+            selected: 'bg-emerald-700 text-white font-bold',
+            rejected: 'bg-rose-950 text-rose-300 border border-rose-700',
+            withdrawn: 'bg-slate-900 text-slate-500'
+        };
+
+        const timelineHTML = steps.length ? steps.map((s, idx) => `
+            <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${statusColors[s.status] || 'bg-slate-800 text-slate-300'}">
+                    ${idx + 1}
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-white capitalize">${(s.status || '').replace(/_/g, ' ')}</p>
+                    <p class="text-[10px] text-slate-400">${s.date || s.timestamp || ''}</p>
+                    ${s.note ? `<p class="text-[10px] text-slate-300 mt-0.5 italic">"${s.note}"</p>` : ''}
+                </div>
+            </div>
+        `).join('') : `
+            <div class="text-center py-4 text-xs text-slate-400">
+                <i class="fa-solid fa-clock-rotate-left text-2xl text-indigo-400 mb-2 block"></i>
+                <p class="font-bold text-white">Application Submitted</p>
+                <p class="mt-1">Status: <span class="capitalize text-indigo-300 font-semibold">${a.status || 'applied'}</span></p>
+            </div>
+        `;
+
+        const existing = document.getElementById('timeline-modal-dyn');
+        if (existing) existing.remove();
+
+        const div = document.createElement('div');
+        div.id = 'timeline-modal-dyn';
+        div.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm';
+        div.innerHTML = `
+            <div class="glass-card w-full max-w-md rounded-3xl border border-slate-800 p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Application Timeline</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">${a.opportunity_title || a.job_title || 'Application #' + appId}</p>
+                    </div>
+                    <button onclick="document.getElementById('timeline-modal-dyn').remove()" class="text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <div class="space-y-3 py-2">
+                    ${timelineHTML}
+                </div>
+                <div class="pt-3 border-t border-slate-800 flex justify-end">
+                    <button onclick="document.getElementById('timeline-modal-dyn').remove()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 9. ORGANIZER: APPLICANT REVIEW & STATUS UPDATE ---
+async function viewOppApplicants(oppId) {
+    try {
+        const res = await fetch(`${API_BASE}/portals/organizer/opportunities/${oppId}/applicants`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        if (!res.ok) throw new Error('Could not load applicant list');
+        const data = await res.json();
+        const items = data.applicants || (Array.isArray(data) ? data : []);
+
+        const rows = items.length ? items.map(ap => `
+            <tr class="border-t border-slate-800 text-xs">
+                <td class="p-3 font-semibold text-white">${ap.name || ap.applicant_name || 'Student'}</td>
+                <td class="p-3 text-slate-400">${ap.college || '—'}</td>
+                <td class="p-3">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
+                        ap.status === 'selected' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
+                        ap.status === 'rejected' ? 'bg-rose-950 text-rose-400 border border-rose-800' :
+                        ap.status === 'shortlisted' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                        'bg-slate-800 text-slate-300'
+                    }">${(ap.status || 'applied').replace(/_/g, ' ')}</span>
+                </td>
+                <td class="p-3 text-slate-400">${ap.applied_at ? ap.applied_at.substring(0, 10) : '—'}</td>
+                <td class="p-3">
+                    <div class="flex gap-1.5">
+                        <button onclick="updateApplicantStatus(${ap.id || ap.application_id}, 'shortlisted', ${oppId})" class="px-2 py-1 rounded bg-amber-900/80 hover:bg-amber-800 text-amber-300 text-[10px] font-semibold transition">Shortlist</button>
+                        <button onclick="updateApplicantStatus(${ap.id || ap.application_id}, 'rejected', ${oppId})" class="px-2 py-1 rounded bg-rose-900/80 hover:bg-rose-800 text-rose-300 text-[10px] font-semibold transition">Reject</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="p-6 text-center text-xs text-slate-400">No applicants yet for this opportunity.</td></tr>`;
+
+        const existing = document.getElementById('applicants-modal-dyn');
+        if (existing) existing.remove();
+
+        const div = document.createElement('div');
+        div.id = 'applicants-modal-dyn';
+        div.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm';
+        div.innerHTML = `
+            <div class="glass-card w-full max-w-2xl rounded-3xl border border-slate-800 p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Applicants for Opportunity #${oppId}</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">${items.length} applicant(s) in review</p>
+                    </div>
+                    <button onclick="document.getElementById('applicants-modal-dyn').remove()" class="text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Student</th>
+                                <th class="p-3">College</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Applied</th>
+                                <th class="p-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                <div class="pt-2 flex justify-end">
+                    <button onclick="document.getElementById('applicants-modal-dyn').remove()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function updateApplicantStatus(appId, status, oppId) {
+    try {
+        const res = await fetch(`${API_BASE}/portals/recruiter/applications/${appId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+            body: JSON.stringify({ status: status })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Status update failed');
+        showToast(`Application marked as "${status}" ✅`, 'success');
+        if (oppId) viewOppApplicants(oppId);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- 10. GLOBAL SEARCH OUTSIDE CLICK LISTENER ---
+document.addEventListener('click', function(e) {
+    const searchInput   = document.getElementById('global-search-input');
+    const searchResults = document.getElementById('global-search-results');
+    if (!searchInput || !searchResults) return;
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        hideGlobalSearchResults();
+    }
+});
+
+// --- 11. LANDING HERO LIVE METRICS & CTA UPDATE ---
+async function updateHeroMetrics() {
+    try {
+        const res = await fetch(`${API_BASE}/portals/admin/dashboard`, {
+            headers: state.token ? { 'Authorization': `Bearer ${state.token}` } : {}
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const m = data.metrics || {};
+
+        const metricEls = document.querySelectorAll('#view-landing .glass-card p.text-2xl');
+        if (metricEls.length >= 4) {
+            metricEls[0].textContent = (m.total_users || 1054) + '+';
+            metricEls[1].textContent = (m.opportunities || 60) + '+';
+            metricEls[2].textContent = '0-100';
+            metricEls[3].textContent = '100%';
+        }
+        const metricLabels = document.querySelectorAll('#view-landing .glass-card p.text-xs.text-slate-400');
+        if (metricLabels.length >= 2) {
+            metricLabels[0].textContent = 'Students Registered';
+            metricLabels[1].textContent = 'Active Opportunities';
+        }
+        const ctaLinks = document.querySelectorAll('#view-landing a[href="#events"]');
+        ctaLinks.forEach(link => {
+            link.innerHTML = '<i class="fa-solid fa-compass text-indigo-400"></i> Explore Opportunities';
+            link.setAttribute('href', '#opportunities');
+        });
+    } catch (err) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(updateHeroMetrics, 1200);
+});
+
+// --- 12. ADMIN VERIFICATION QUEUE ---
+async function loadAdminVerificationQueue() {
+    const container = document.getElementById('admin-verification-queue');
+    if (!container) return;
+    const mockQueue = [
+        { type: 'College Email', name: 'Priya Mehta', detail: 'priya@iitb.ac.in', status: 'pending' },
+        { type: 'Company', name: 'TechRocket Pvt Ltd', detail: 'Company size: 200+ employees', status: 'pending' },
+        { type: 'Mentor', name: 'Dr. Ananya Singh', detail: 'Ex-Google Staff Engineer', status: 'pending' }
+    ];
+    container.innerHTML = mockQueue.map(r => `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-800 mr-2">${r.type}</span>
+                <span class="text-xs font-semibold text-white">${r.name}</span>
+                <p class="text-[10px] text-slate-400 mt-0.5">${r.detail}</p>
+            </div>
+            <div class="flex gap-1.5">
+                <button onclick="showToast('Approved ✅', 'success')" class="px-2.5 py-1 rounded-lg bg-emerald-900 hover:bg-emerald-800 text-emerald-300 text-[10px] font-semibold transition">Approve</button>
+                <button onclick="showToast('Rejected', 'error')" class="px-2.5 py-1 rounded-lg bg-rose-900 hover:bg-rose-800 text-rose-300 text-[10px] font-semibold transition">Reject</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Extend showAdminPortalView to render queue
+const _existingAdminPortalView = window.showAdminPortalView;
+window.showAdminPortalView = async function() {
+    if (typeof _existingAdminPortalView === 'function') {
+        await _existingAdminPortalView();
+    }
+    loadAdminVerificationQueue();
+};
+
+// --- 13. NOTIFICATION MARK ALL READ ---
+async function markAllNotificationsRead() {
+    try {
+        await fetch(`${API_BASE}/notifications/mark-all-read`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        loadNotifications();
+        showToast('All notifications marked as read', 'success');
+    } catch (err) {}
+}

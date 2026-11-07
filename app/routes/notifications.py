@@ -55,6 +55,7 @@ def mark_notification_read(
 
 
 @router.put("/read-all")
+@router.post("/mark-all-read")
 def mark_all_read(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

@@ -223,6 +223,61 @@ def test_expansion_suite():
     tasks = res.json()
     print(f"    [PASS] Team room kanban checklist loaded with {len(tasks)} tasks.")
 
+    # 14. Testing Interactive Action Modals & Workflows
+    print(">>> 14. Testing Interactive Action Modals & Workflows (Mentorship, Referrals, Forum, Alerts, Portals)...")
+    # Mentor booking
+    b_res = client.post("/api/community/mentors/book", headers=student_headers, json={
+        "mentor_id": 1, "scheduled_at": "Saturday 11:00 AM", "topic": "Architecture and Pitch Review"
+    })
+    assert b_res.status_code == 200
+    print("    [PASS] Mentor 1:1 session booked successfully.")
+
+    # Alumni referral request
+    r_res = client.post("/api/community/alumni/referral-request", headers=student_headers, json={
+        "alumni_id": 1, "job_url": "https://company.com/jobs/sde1", "resume_link": "https://drive.google.com/resume.pdf", "note": "Targeting SDE 1"
+    })
+    assert r_res.status_code == 200
+    print("    [PASS] Alumni referral request dispatched.")
+
+    # Community forum discussion post
+    f_res = client.post("/api/community/forum/threads", headers=student_headers, json={
+        "title": "Scaling FastAPI WebSockets with Redis", "content": "Production tips for 10k connections?", "skill_name": "Python"
+    })
+    assert f_res.status_code == 200
+    print("    [PASS] Technical forum thread posted.")
+
+    # Job Alert
+    a_res = client.post("/api/jobs/alerts", headers=student_headers, json={
+        "keyword": "FastAPI", "role": "Backend Developer", "location": "Remote", "min_stipend": "30,000/mo"
+    })
+    assert a_res.status_code == 200
+    print("    [PASS] Job alert configured and active.")
+
+    # Organizer opportunity creation
+    org_res = client.post("/api/auth/login", json={"email": "organizer@delhitechexpo.edu", "password": "demo1234"})
+    assert org_res.status_code == 200
+    org_headers = {"Authorization": f"Bearer {org_res.json()['access_token']}"}
+
+    opp_res = client.post("/api/portals/organizer/opportunities", headers=org_headers, json={
+        "title": "Delhi AI Innovation Sprint 2026", "type": "Hackathon", "description": "48 hour innovation sprint",
+        "skills": ["Python", "FastAPI"], "location_mode": "Online", "deadline": "In 21 days", "prize_pool": "3,00,000",
+        "team_size_min": 2, "team_size_max": 4
+    })
+    assert opp_res.status_code == 200
+    print(f"    [PASS] Organizer published opportunity live (ID {opp_res.json().get('id')}).")
+
+    # Recruiter application status update
+    status_res = client.put("/api/portals/recruiter/applications/1/status", headers=rec_headers, json={
+        "status": "Shortlisted", "note": "Strong match on skills and experience."
+    })
+    assert status_res.status_code == 200
+    print("    [PASS] Recruiter updated candidate status.")
+
+    # Notification mark all read
+    n_res = client.post("/api/notifications/mark-all-read", headers=student_headers)
+    assert n_res.status_code == 200
+    print("    [PASS] Notifications marked read.")
+
     print("\n" + "="*70)
     print(">>> ALL EXPANSION SUITE TESTS PASSED WITH 100% SUCCESS!")
     print("="*70 + "\n")

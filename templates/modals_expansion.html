@@ -1,0 +1,314 @@
+<!-- PLATFORM EXPANSION MODALS -->
+
+<!-- 1. CREATE OPPORTUNITY MODAL (ORGANIZERS) -->
+<div id="create-opp-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-card w-full max-w-xl rounded-3xl border border-slate-800 p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bullhorn text-amber-400"></i> Host New Opportunity
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Publish hackathons, competitions, workshops, or scholarships to 1,050+ students.</p>
+            </div>
+            <button onclick="closeModal('create-opp-modal')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form onsubmit="handleCreateOpportunitySubmit(event)" class="space-y-3.5 text-xs">
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Opportunity Title *</label>
+                <input type="text" id="create-opp-title" required placeholder="e.g. National Generative AI Hackathon 2026" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Category / Type *</label>
+                    <select id="create-opp-type" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                        <option value="Hackathon">Hackathon</option>
+                        <option value="Competition">Competition</option>
+                        <option value="Coding Challenge">Coding Challenge</option>
+                        <option value="Case Study">Case Study</option>
+                        <option value="Workshop">Workshop</option>
+                        <option value="Webinar">Webinar</option>
+                        <option value="Conference">Conference</option>
+                        <option value="Scholarship">Scholarship</option>
+                        <option value="Internship">Internship</option>
+                        <option value="Fellowship">Fellowship</option>
+                        <option value="Campus Ambassador Role">Campus Ambassador Role</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Mode *</label>
+                    <select id="create-opp-mode" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                        <option value="Online">Online / Virtual</option>
+                        <option value="Offline">Offline / In-Person</option>
+                        <option value="Hybrid">Hybrid</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Deadline *</label>
+                    <input type="text" id="create-opp-deadline" required placeholder="e.g. In 14 days (or Nov 30)" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Prizes / Stipend *</label>
+                    <input type="text" id="create-opp-prize" required placeholder="e.g. ₹2,50,000 Pool + Swag" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Min Team Size</label>
+                    <input type="number" id="create-opp-team-min" min="1" max="10" value="1" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Max Team Size</label>
+                    <input type="number" id="create-opp-team-max" min="1" max="10" value="4" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Target Skills (comma separated) *</label>
+                <input type="text" id="create-opp-skills" required placeholder="Python, FastAPI, React, Machine Learning" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Description & Eligibility *</label>
+                <textarea id="create-opp-desc" rows="3" required placeholder="Outline event problem statement, eligibility criteria, and timeline stages..." class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeModal('create-opp-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 font-bold text-white shadow-lg">Publish Opportunity</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. JOB ALERT MODAL (STUDENTS) -->
+<div id="job-alert-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-card w-full max-w-md rounded-3xl border border-slate-800 p-6 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bell text-indigo-400"></i> Create Job Alert
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Receive in-app notifications whenever matching jobs or internships open.</p>
+            </div>
+            <button onclick="closeModal('job-alert-modal')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form onsubmit="handleCreateJobAlertSubmit(event)" class="space-y-3 text-xs">
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Keywords</label>
+                <input type="text" id="alert-keyword" placeholder="e.g. Backend, PyTorch, React" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Role Track</label>
+                <select id="alert-role" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                    <option value="">Any Role</option>
+                    <option value="Backend Developer">Backend Developer</option>
+                    <option value="Frontend Developer">Frontend Developer</option>
+                    <option value="Full Stack Developer">Full Stack Developer</option>
+                    <option value="Data Scientist">Data Scientist</option>
+                    <option value="ML Engineer">Machine Learning Engineer</option>
+                    <option value="UI/UX Designer">UI/UX Designer</option>
+                    <option value="DevOps Engineer">DevOps Engineer</option>
+                    <option value="Mobile Developer">Mobile Developer</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Location Preference</label>
+                <select id="alert-location" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                    <option value="">Any Location (including Remote)</option>
+                    <option value="Remote">Remote</option>
+                    <option value="Bangalore">Bangalore</option>
+                    <option value="Delhi NCR">Delhi NCR</option>
+                    <option value="Mumbai">Mumbai</option>
+                    <option value="Hyderabad">Hyderabad</option>
+                    <option value="Pune">Pune</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Minimum Expected Stipend / Salary</label>
+                <select id="alert-min-stipend" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                    <option value="">No Minimum</option>
+                    <option value="₹15,000/mo">₹15,000 / month+</option>
+                    <option value="₹25,000/mo">₹25,000 / month+</option>
+                    <option value="₹40,000/mo">₹40,000 / month+</option>
+                    <option value="₹60,000/mo">₹60,000 / month+</option>
+                    <option value="₹8 LPA">₹8 LPA+ (Full Time)</option>
+                    <option value="₹15 LPA">₹15 LPA+ (Full Time)</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeModal('job-alert-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow">Save Alert</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. RESUME BUILDER MODAL (CREATE CUSTOM RESUME) -->
+<div id="resume-create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-card w-full max-w-xl rounded-3xl border border-slate-800 p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-file-pen text-indigo-400"></i> Create ATS-Ready Resume
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Auto-fills from your verified profile or customize for a targeted application.</p>
+            </div>
+            <button onclick="closeModal('resume-create-modal')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form onsubmit="handleCreateResumeSubmit(event)" class="space-y-3.5 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Resume Title *</label>
+                    <input type="text" id="resume-title" required value="Backend & Systems Resume" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">ATS Template Style</label>
+                    <select id="resume-template" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                        <option value="modern">Modern Professional</option>
+                        <option value="minimal">Minimal Tech</option>
+                        <option value="technical">Research & Engineering</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Professional Summary</label>
+                <textarea id="resume-summary" rows="2" placeholder="Passionate Computer Science undergraduate with hands-on experience building distributed backend systems..." class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Core Skills (comma separated)</label>
+                <input type="text" id="resume-skills" placeholder="Python, FastAPI, PostgreSQL, Docker, Redis, TailwindCSS" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <span class="text-[11px] font-bold text-indigo-300 uppercase tracking-wider block">Key Experience / Project</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input type="text" id="resume-exp-role" placeholder="Role (e.g. SDE Intern)" class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-white">
+                    <input type="text" id="resume-exp-org" placeholder="Company / Team" class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-white">
+                    <input type="text" id="resume-exp-duration" placeholder="Duration (e.g. 6 mos)" class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-white">
+                </div>
+                <textarea id="resume-exp-desc" rows="2" placeholder="Developed core matching pipeline and reduced query latency by 45% using SQLite WAL mode." class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-white"></textarea>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <span class="text-[11px] font-bold text-purple-300 uppercase tracking-wider block">Education</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input type="text" id="resume-edu-degree" placeholder="Degree (e.g. B.Tech CSE)" class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-white">
+                    <input type="text" id="resume-edu-college" placeholder="College / University" class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-white">
+                    <input type="text" id="resume-edu-year" placeholder="Grad Year (e.g. 2026)" class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-white">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeModal('resume-create-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow">Save Resume</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 4. FORUM CREATE THREAD MODAL (COMMUNITY) -->
+<div id="forum-create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-card w-full max-w-md rounded-3xl border border-slate-800 p-6 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-indigo-400"></i> Start Tech Discussion
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Ask questions, share hackathon insights, or seek team advice.</p>
+            </div>
+            <button onclick="closeModal('forum-create-modal')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form onsubmit="handleForumCreateSubmit(event)" class="space-y-3 text-xs">
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Discussion Topic / Question *</label>
+                <input type="text" id="forum-create-title" required placeholder="e.g. Best architecture for real-time WebSocket chat in FastAPI?" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Skill or Category Tag</label>
+                <select id="forum-create-tag" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+                    <option value="General">General / Hackathon Tips</option>
+                    <option value="Python">Python & Backend</option>
+                    <option value="React">React & Frontend</option>
+                    <option value="Machine Learning">AI & Machine Learning</option>
+                    <option value="Cloud Computing">Cloud & DevOps</option>
+                    <option value="Career Guidance">Career & Interview Prep</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Content / Context *</label>
+                <textarea id="forum-create-body" rows="4" required placeholder="Explain your question in detail, mention libraries used, and what you've tried so far..." class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none"></textarea>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeModal('forum-create-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow">Post Discussion</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 5. REFERRAL REQUEST MODAL (ALUMNI) -->
+<div id="referral-request-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-card w-full max-w-md rounded-3xl border border-slate-800 p-6 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-handshake text-emerald-400"></i> Request Alumni Referral
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Send a verified referral request to senior college alumni.</p>
+            </div>
+            <button onclick="closeModal('referral-request-modal')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form onsubmit="handleReferralRequestSubmit(event)" class="space-y-3 text-xs">
+            <input type="hidden" id="ref-alumni-id-hidden">
+            <div class="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Referring Alumni</span>
+                    <p id="ref-alumni-name" class="font-bold text-white text-xs mt-0.5">Alumni</p>
+                </div>
+                <span id="ref-company-name" class="px-2.5 py-1 rounded-lg bg-emerald-900/60 text-emerald-200 text-xs font-semibold">Company</span>
+            </div>
+
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Target Job Link or Requisition ID *</label>
+                <input type="url" id="ref-job-url" required placeholder="https://company.com/careers/job-12345" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Resume Link (Google Drive / GitHub) *</label>
+                <input type="url" id="ref-resume-link" required placeholder="https://drive.google.com/file/d/..." class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-slate-300 font-semibold mb-1">Brief Pitch / Elevator Note to Alumni *</label>
+                <textarea id="ref-message" rows="3" required placeholder="Hi! I'm a 3rd year student from MAIT. I saw the SDE 1 opening on your team and have built similar FastAPI & Redis pipelines..." class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-white focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeModal('referral-request-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
