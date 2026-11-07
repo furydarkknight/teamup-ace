@@ -54,6 +54,14 @@ class User(Base):
     reliability_score = Column(Float, default=0.0) # 0-100 score
     ratings_count = Column(Integer, default=0)
 
+    # Role-based system
+    role = Column(String(50), default="student", index=True) # student, organizer, recruiter, mentor, admin
+    roles_json = Column(Text, default='["student"]')
+    username = Column(String(100), unique=True, index=True, nullable=True)
+    headline = Column(String(255), default="")
+    company_name = Column(String(150), default="")
+    points = Column(Integer, default=0)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -99,6 +107,17 @@ class User(Base):
         """Returns list of {'name': skill, 'level': 1-5} for UI chips and sliders"""
         prof = self.skill_proficiency
         return [{"name": s, "level": prof.get(s, 3)} for s in self.skills]
+
+    @property
+    def roles(self):
+        try:
+            return json.loads(self.roles_json) if self.roles_json else [self.role or "student"]
+        except Exception:
+            return [self.role or "student"]
+
+    @roles.setter
+    def roles(self, val):
+        self.roles_json = json.dumps(val if isinstance(val, list) else [val])
 
     @property
     def interests(self):
@@ -431,3 +450,16 @@ class Report(Base):
     reason = Column(String(100), nullable=False)
     details = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# Import and expose all platform expansion models
+from app.models_expansion import (
+    Opportunity, Company, JobPosting, Resume, JobAlert,
+    Application, SavedItem, Notification, Course, CourseModule,
+    CourseLesson, CourseEnrollment, LessonProgress, Assessment,
+    AssessmentAttempt, LearningPath, Certificate, VerifiedSkill,
+    Badge, UserBadge, MentorProfile, MentorshipSession, AlumniProfile,
+    ReferralRequest, ForumThread, ForumPost, College, Club,
+    ProjectSubmission, JudgingScore, TrialSprint, BackupBench, TeamTask
+)
+

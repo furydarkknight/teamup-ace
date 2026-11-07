@@ -1,0 +1,153 @@
+<!-- ROLE PORTALS (PHASE 7: ORGANIZER, RECRUITER, ADMIN) -->
+
+<!-- 1. ORGANIZER PORTAL -->
+<section id="view-portal-organizer" class="hidden space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Organizer Dashboard</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Host multi-round hackathons, monitor registrations, track team formation funnel, and issue credentials.</p>
+        </div>
+        <button onclick="openModal('create-opp-modal')" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition">
+            + Host New Opportunity
+        </button>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs font-semibold text-slate-400">Total Opportunities</span>
+            <p id="org-metric-opps" class="text-3xl font-black text-white mt-1">0</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs font-semibold text-slate-400">Total Student Registrations</span>
+            <p id="org-metric-regs" class="text-3xl font-black text-emerald-400 mt-1">0</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs font-semibold text-slate-400">Active Hackathons</span>
+            <p id="org-metric-hackathons" class="text-3xl font-black text-indigo-400 mt-1">0</p>
+        </div>
+    </div>
+
+    <!-- Opportunities Table -->
+    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white">Hosted Programs & Hackathons</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                    <tr>
+                        <th class="p-3">Title</th>
+                        <th class="p-3">Category</th>
+                        <th class="p-3">Registrations</th>
+                        <th class="p-3">Teams Formed</th>
+                        <th class="p-3">Status</th>
+                        <th class="p-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="org-opportunities-table" class="divide-y divide-slate-800"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- 2. RECRUITER PORTAL -->
+<section id="view-portal-recruiter" class="hidden space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Recruiter Portal</h2>
+            <p id="rec-company-title" class="text-xs sm:text-sm text-emerald-400 font-semibold mt-1"></p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span id="talent-count-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                1,050 Verified Students
+            </span>
+        </div>
+    </div>
+
+    <!-- Recruiter Metrics -->
+    <div class="grid grid-cols-2 gap-4">
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs font-semibold text-slate-400">Active Job Postings</span>
+            <p id="rec-metric-openings" class="text-3xl font-black text-white mt-1">0</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs font-semibold text-slate-400">Candidate Pipeline</span>
+            <p id="rec-metric-applicants" class="text-3xl font-black text-emerald-400 mt-1">0</p>
+        </div>
+    </div>
+
+    <!-- Talent Search Engine over 1,050 students -->
+    <div class="glass-card p-5 rounded-2xl border border-emerald-500/30 space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-magnifying-glass text-emerald-400 mr-2"></i> Talent Search over 1,050 Students</h3>
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="talent-verified-check" onchange="executeRecruiterTalentSearch()" class="rounded text-emerald-600 focus:ring-0">
+                <span>Verified Students Only (.ac.in / .edu)</span>
+            </label>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Required Skill</label>
+                <select id="talent-skill-filter" onchange="executeRecruiterTalentSearch()" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none">
+                    <option value="All">All 31 Skills</option>
+                    <option value="Python">Python</option>
+                    <option value="React">React</option>
+                    <option value="FastAPI">FastAPI</option>
+                    <option value="Machine Learning">Machine Learning</option>
+                    <option value="Deep Learning">Deep Learning</option>
+                    <option value="SQL">SQL</option>
+                    <option value="Cloud Computing">Cloud Computing</option>
+                    <option value="UI/UX Design">UI/UX Design</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">University / College</label>
+                <select id="talent-college-filter" onchange="executeRecruiterTalentSearch()" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none">
+                    <option value="All">All Universities (24)</option>
+                    <option value="MAIT">MAIT Delhi</option>
+                    <option value="DTU">DTU Delhi</option>
+                    <option value="IIT Bombay">IIT Bombay</option>
+                    <option value="BITS Pilani">BITS Pilani</option>
+                    <option value="IIIT Hyderabad">IIIT Hyderabad</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="talent-search-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2"></div>
+        <div id="talent-pagination" class="pt-2 flex justify-center"></div>
+    </div>
+</section>
+
+<!-- 3. ADMIN PORTAL -->
+<section id="view-portal-admin" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Platform Administration</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Global user directory, verification queue, and content governance.</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-950 text-rose-400 border border-rose-800">
+            Super Administrator
+        </span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs text-slate-400">Total Users</span>
+            <p id="admin-metric-users" class="text-2xl font-black text-white mt-1">0</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs text-slate-400">Opportunities</span>
+            <p id="admin-metric-opps" class="text-2xl font-black text-indigo-400 mt-1">0</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs text-slate-400">Jobs Posted</span>
+            <p id="admin-metric-jobs" class="text-2xl font-black text-emerald-400 mt-1">0</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <span class="text-xs text-slate-400">Teams Formed</span>
+            <p id="admin-metric-teams" class="text-2xl font-black text-purple-400 mt-1">0</p>
+        </div>
+    </div>
+</section>

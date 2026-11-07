@@ -1,0 +1,111 @@
+<!-- LEARN: COURSES, ASSESSMENTS & LEARNING PATHS (PHASE 4) -->
+<section id="view-learn" class="hidden space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">ACE Skill Academy</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">40+ courses aligned with the hackathon dataset. Take skill assessments to earn verified proficiency badges.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-purple-950 text-purple-300 border border-purple-800/60">
+                Level 1-5 Benchmark System
+            </span>
+        </div>
+    </div>
+
+    <!-- Career Learning Paths Section -->
+    <div class="space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-purple-400">Curated Career Tracks</h3>
+        <div id="learning-paths-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Skill Assessments Section -->
+    <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-white">Skill Proficiency Assessments</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Scoring 70%+ awards a verified level badge to your digital portfolio.</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-950 text-indigo-400 border border-indigo-800">25 Assessments</span>
+        </div>
+        <div id="assessments-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+    </div>
+
+    <!-- Courses Catalog Section -->
+    <div class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">All Courses (40)</h3>
+            <div class="flex flex-wrap items-center gap-2">
+                <input type="text" id="course-search" oninput="loadCourses()" placeholder="Search courses..." class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-500">
+                <select id="course-level-filter" onchange="loadCourses()" class="px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-500">
+                    <option value="All">All Levels</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                </select>
+            </div>
+        </div>
+        <div id="courses-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+        <div id="courses-pagination" class="pt-4 flex justify-center"></div>
+    </div>
+</section>
+
+<!-- COURSE DETAIL & PLAYER MODAL -->
+<div id="course-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="glass-card w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-800 p-6 space-y-6">
+        <div class="flex items-start justify-between">
+            <div>
+                <h3 id="course-detail-modal-title" class="text-xl font-bold text-white"></h3>
+                <p id="course-detail-modal-instructor" class="text-xs text-purple-400 font-semibold mt-1"></p>
+            </div>
+            <button onclick="closeModal('course-detail-modal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <div>
+            <div class="flex justify-between text-xs text-slate-400 mb-1">
+                <span>Your Progress</span>
+                <span id="course-detail-progress-text" class="font-bold text-purple-400">0%</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                <div id="course-detail-progress-bar" class="bg-gradient-to-r from-purple-600 to-indigo-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <p id="course-detail-modal-desc" class="text-xs text-slate-300 leading-relaxed"></p>
+
+        <div>
+            <h5 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Course Modules & Lessons</h5>
+            <div id="course-modules-list" class="space-y-3"></div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 flex justify-end">
+            <button onclick="closeModal('course-detail-modal')" class="px-5 py-2 rounded-xl bg-slate-800 text-xs text-white font-medium">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- ASSESSMENT TEST RUNNER MODAL -->
+<div id="assessment-runner-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm hidden">
+    <div class="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-indigo-500/40 p-6 space-y-6">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div>
+                <h3 id="assessment-modal-title" class="text-base font-bold text-white"></h3>
+                <p id="assessment-modal-desc" class="text-[11px] text-slate-400 mt-0.5"></p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                <i class="fa-regular fa-clock mr-1"></i> 15 Mins
+            </span>
+        </div>
+
+        <div id="assessment-questions-container" class="space-y-4"></div>
+
+        <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+            <span class="text-xs text-slate-400">Passing score: 70% • Instant badge award</span>
+            <div class="flex gap-2">
+                <button onclick="closeModal('assessment-runner-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-300">Exit Test</button>
+                <button onclick="submitAssessmentExam()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white shadow">
+                    Submit Exam
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

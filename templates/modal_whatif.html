@@ -1,0 +1,50 @@
+<!-- "WHAT IF I JOIN?" SIMULATOR MODAL (PHASE 8) -->
+<div id="what-if-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm hidden">
+    <div class="glass-card w-full max-w-xl rounded-3xl border border-indigo-500/50 p-6 space-y-6 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-ping"></span>
+                <h3 class="text-base font-bold text-white">⚡ "What If I Join?" Simulator</h3>
+            </div>
+            <button onclick="closeModal('what-if-modal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="text-center space-y-1">
+            <p class="text-xs text-slate-400">Simulating candidate <strong id="whatif-candidate-name" class="text-white"></strong> joining</p>
+            <h4 id="whatif-team-name" class="text-xl font-black text-indigo-400"></h4>
+        </div>
+
+        <!-- Before vs After Coverage Comparison -->
+        <div class="grid grid-cols-2 gap-4">
+            <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-center">
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Before You Join</span>
+                <p id="whatif-before-pct" class="text-3xl font-black text-slate-300 mt-1">0%</p>
+                <p class="text-[10px] text-slate-500 mt-1">Current team skill coverage</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-600/60 text-center relative overflow-hidden">
+                <div class="absolute top-2 right-2">
+                    <span id="whatif-boost-pill" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-900 text-emerald-300 border border-emerald-700/80"></span>
+                </div>
+                <span class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">After You Join</span>
+                <p id="whatif-after-pct" class="text-3xl font-black text-emerald-300 mt-1">0%</p>
+                <p class="text-[10px] text-emerald-400/80 mt-1">Combined skill synergy</p>
+            </div>
+        </div>
+
+        <!-- Critical gaps filled -->
+        <div>
+            <h5 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Critical Gaps Filled by You</h5>
+            <div id="whatif-filled-skills" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- AI Synergy Verdict -->
+        <div class="p-4 rounded-xl bg-indigo-950/40 border border-indigo-800/60">
+            <h6 class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 mb-1">Explainable AI Synergy Verdict</h6>
+            <p id="whatif-verdict" class="text-xs text-slate-300 leading-relaxed"></p>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+            <button onclick="closeModal('what-if-modal')" class="px-5 py-2 rounded-xl bg-slate-800 text-xs text-slate-300 font-semibold">Close</button>
+        </div>
+    </div>
+</div>

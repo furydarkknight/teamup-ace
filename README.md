@@ -1,179 +1,142 @@
-# 🚀 TeamUp by ACE
-### AI-Powered Team Finder & Collaboration Platform for AllCollegeEvent.com (ACE)
-*Built for the ACE TeamUp Challenge (International Hackathon 5.0)*
+# 🚀 AllCollegeEvent (ACE) TeamUp Platform
+### The Unified AI-Powered Student Opportunity, Team Formation & Career Platform
+*Prototype & Moat for the ACE TeamUp Challenge (International Hackathon 5.0)*
 
 ---
 
-## 📌 Problem Statement
-Students struggle to find teammates with complementary skills for hackathons. Existing platforms (Unstop, Naukri Campus) are primarily event and job boards; actual team formation is relegated to chaotic WhatsApp groups and manual cold outreach, resulting in:
-- **No skill-complement matching**: Teams end up with 3 backend devs and zero designers.
-- **Zero reliability signal**: High ghosting rates during 36-hour sprint crunches.
-- **Siloed discovery**: Limited to a student's immediate batch or campus.
-
-**TeamUp** makes intelligent, complement-based team formation the core product.
-
----
-
-## 🛠️ Tech Stack
-- **Backend**: Python 3.12 with **FastAPI** (REST JSON APIs, Pydantic schemas)
-- **Database**: SQLite with **SQLAlchemy ORM** (safe migrations with `app/migrations.py`)
-- **Frontend**: HTML5, **Tailwind CSS** (CDN), FontAwesome 6, and responsive Vanilla JavaScript
-- **Matching Engine**: Modular, swappable architecture (`matching/base.py`, `matching/rule_based.py`, `matching/ml_matcher.py`)
-- **Machine Learning Support**: 229-dimensional feature schema (`models/feature_schema.json`), Sentence-Transformers embedding support (`models/ace_teamup_model_v2`), and dataset exporter (`training/export_dataset.py`)
-- **Real Dataset Ready**: Seeded and imported with 1,000 real students and 300 hackathon teams (`import_data.py`)
+## 🌟 Vision & Platform Scope
+ACE TeamUp transforms AllCollegeEvent.com into a **comprehensive one-stop student ecosystem**. A student never needs Unstop, Naukri Campus, LinkedIn, or chaotic WhatsApp groups again:
+- **Opportunities Hub**: Parity with Unstop across all 16 categories (Hackathons, Quizzes, Workshops, Case Studies, Scholarships, Fellowships).
+- **Jobs & Early-Career Portal**: Direct hiring from 15 verified enterprises with 1-click apply, resume builder, and skill match scoring.
+- **Learn & Assessment Academy**: 40+ courses aligned with the dataset skills, 25 skill assessments awarding verified Level 1–5 badges, and 6 career learning tracks.
+- **Digital Portfolio & Public Verification**: Shareable `/u/{username}` portfolio and cryptographically verifiable `/verify/{id}` credentials with QR codes.
+- **Community & Mentorship**: 30 verified industry mentors with 1:1 slot booking, 40 alumni for job referrals, and collegiate campus clubs.
+- **17 Unique TeamUp Innovations**: Complementary skill matching, "What If I Join?" simulator, skill gap heatmaps, 24-hr trial sprints, backup bench, and private team rooms.
 
 ---
 
-## ⚡ Quick Start (One Command)
+## 🔑 Demo Accounts for Every Role
+
+The platform supports **role-based accounts** with dedicated dashboards. You can switch between any role with 1 tap from the **"Role: Switch"** menu in the top navigation bar, or log in with these credentials:
+
+| Role | Name & Title | Email | Password | Dashboard Features |
+|---|---|---|---|---|
+| **Student** | Aarav Sharma (3rd Year CSE, MAIT) | `demo@mait.ac.in` | `demo1234` | Full flow: Opps, Jobs, Resume Builder, My Space, Skill Assessments, Team Finder |
+| **Organizer** | Dr. Rajesh Verma (Convenor, DTU) | `organizer@delhitechexpo.edu` | `demo1234` | Host opportunities, applicant review pipeline, team formation stats |
+| **Recruiter** | Pooja Mehra (Talent Lead, Nexus Labs) | `recruiter@nexuslabs.com` | `demo1234` | Active job postings, candidate pipeline, **Talent Search over 1,050 students** |
+| **Mentor** | Vikram Malhotra (Sr. AI Architect) | `mentor@aiimsalumni.ac.in` | `demo1234` | Mentorship sessions, student guidance, hackathon advice |
+| **Super Admin** | ACE Administrator | `admin@allcollegeevent.com` | `admin1234` | Global telemetry, verification requests, content governance |
+
+---
+
+## ⚡ Quick Start & Run Commands
 
 ### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Import Real Datasets & Run Server
+### 2. Run Database Migrations & Seeding (Pre-seeded with 1,054 students & 305 teams)
 ```bash
-python import_data.py --students students.csv --teams teams.csv
+python seed_expansion.py
+```
+
+### 3. Launch the Server
+```bash
 python run.py
 ```
-Open your browser at **`http://localhost:8000`**!
+Open **`http://localhost:8000`** in your browser!
 
-- **Swagger API Docs**: `http://localhost:8000/docs`
+- **Web Application**: `http://localhost:8000`
+- **Swagger Interactive API Docs**: `http://localhost:8000/docs`
 - **ReDoc Interactive Docs**: `http://localhost:8000/redoc`
-- **Meta Categories API**: `http://localhost:8000/api/meta/categories`
+- **Public Certificate Verification**: `http://localhost:8000/verify/ACE-CERT-2026-F891`
+- **Public Digital Portfolio**: `http://localhost:8000/u/aaravsharma`
 
 ---
 
-## 🔑 Demo Account
-An instant demo account is provided with 50 seeded students across 10 colleges:
-- **Email**: `demo@mait.ac.in`
-- **Password**: `demo1234`
-- **User**: Aarav Sharma (3rd Year CSE, MAIT Delhi)
-- **Badge**: Verified College Student (`.ac.in`)
-- **Reliability Score**: 94/100 ⭐
-- *(Or click the **"⚡ Instant Demo"** button on the navbar for 1-click access!)*
+## 🧪 Automated Test Verification
 
----
-
-## 🎯 Key Demo Flow (End-to-End Walkthrough)
-
-1. **Sign In**: Click **"Instant Demo"** or sign in as `demo@mait.ac.in` / `demo1234`.
-2. **Open an Event**: In the Hackathons directory, open **"ACE International Hackathon 5.0"**.
-3. **AI Match Feed**:
-   - Notice the AI-ranked candidate cards with match percentages (e.g. 96% match).
-   - Read the **explainable reasons**: e.g., *"Covers UI/UX Design & PPT/Pitching which your profile lacks for this event. Both available on Weekends with shared goal to Win Grand Prize."*
-   - Filter by college (e.g., IIT Bombay, DTU), city, skills, or mentor-only.
-4. **10-Minute Icebreaker Challenge**:
-   - Click **"10-Min Icebreaker"** on any match card.
-   - Explore the collaborative mini-task prompt, work-style breakdown (schedule & role synergy), live 10:00 countdown timer, and scratchpad.
-5. **Invite a Teammate**: Click **"Invite to Team"**, propose a role, and send an invitation.
-6. **Open Team Dashboard**:
-   - Click **"My Teams"** in the navbar or open **"FinVision Alpha"**.
-   - **Team Gap Analyzer**:
-     - See live comparison of team coverage vs event requirements:
-     - Identifies: `Covered: Backend, Machine Learning` vs `MISSING: UI/UX Design, PPT/Pitching`.
-     - Suggests top candidates to immediately bridge each gap with a 1-click **"Invite"** button!
-   - **AI-Generated Team Pitch**: Read the 60-second pitch hook tailored to the squad's skillset.
-   - **Suggested Division of Labor**: View optimal role assignments for the 36-hour sprint.
-7. **Team Collaboration**:
-   - Send live messages in the **In-App Team Chat**.
-   - Review or post **Open Seats** for the team.
-   - Submit **Peer Feedback** (1-5 stars + tags like "Reliable", "Technical wizard") to update teammate Reliability Scores!
-
----
-
-## 🧠 Modular Matching Engine Architecture
-
-The matching layer is modular, bidirectional, and swappable in `matching/`:
-
-```
-matching/
-├── __init__.py       # Factory pattern: get_matcher()
-├── base.py           # Abstract BaseMatcher class & MatchResult dataclass
-├── weights.py        # Configurable scoring weights
-├── features.py       # 229-dimensional feature vector builder
-├── rule_based.py     # Default complement-based weighted algorithm
-└── ml_matcher.py     # Sentence-Transformers & sklearn model loader with fallback
-```
-
-### 1. Dual-Direction Matching
-- **Student → Teams (`/api/me/recommended-teams`)**: Recommends open teams to a student, ranking by how well the student bridges the team's missing skill requirements and matches their working style.
-- **Team → Students (`/api/teams/{id}/recommended-students`)**: Recommends students to team leads who cover flagged skill gaps.
-- **Event Candidate Feed (`/api/events/{id}/matches`)**: Legacy event-based candidate discovery.
-
-### 2. Weighted Scoring Configuration (`matching/weights.py`)
-- **Skill-Gap Coverage (35%)**: Compares student proficiency against team's minimum required levels (`skill_requirements`).
-- **Interest Overlap (15%)**: Jaccard similarity across 31 domain interests.
-- **Role Fit (15%)**: Matches student's preferred roles with roles the team is actively hiring for.
-- **Experience Fit (10%)**: Exact match (1.0), adjacent level (0.5), or different (0.1).
-- **Availability Match (10%)**: Full-time, Part-time, Weekends compatibility.
-- **Collaboration Style (10%)**: Matches among 10 distinct working preferences from the dataset.
-- **Team Size Fit (5%)**: Evaluates preferred team size (2-8) vs team total capacity.
-
-### 3. Switching Between Matchers (`.env`)
-In your `.env` file:
-```env
-# Use rule-based complement matcher (default):
-MATCHER=rule_based
-
-# Or switch to ML model:
-MATCHER=ml
-```
-
-### 4. 229-Feature Machine Learning Schema (`models/feature_schema.json`)
-The feature builder in `matching/features.py` produces the exact 229 numerical features defined in `models/feature_schema.json`:
-- 31 student skill proficiency levels (0-5)
-- 31 team skill requirement minimum levels (0-5)
-- 31 skill gap indicators `max(0, required - current)`
-- 31 student multi-hot interest indicators
-- 31 team multi-hot interest indicators
-- 21 student preferred role multi-hot indicators
-- 21 team preferred role multi-hot indicators
-- 2 experience ordinals
-- 6 availability one-hot indicators
-- 20 collaboration preference one-hot indicators
-- 4 team size scalars
-
-Export pairs and train an ML model:
+Run the full platform test suite:
 ```bash
-python training/export_dataset.py
-python training/train_dummy_model.py
+# 1. Platform Expansion Suite (Phases 1 - 8)
+python test_expansion.py
+
+# 2. Core Matcher & Regression Suite
+python test_app.py
 ```
+Both suites pass with **100% success** across all endpoints.
 
 ---
 
-## 🔒 Safety & Student Verification
-- **Verified Student Badge**: Automatically verified for emails ending in `.edu`, `.ac.in`, or `.edu.in`.
-- **Team Creation Guard**: Only verified students can create and lead teams (unverified students can browse and apply).
-- **Privacy Protection**: Phone numbers and private emails are never exposed publicly.
-- **Reporting & Blocking**: Confidential reporting pipeline and 1-tap user blocking that removes users from the AI match feed.
+## 🗺️ Feature Map by Phase
+
+### Phase 1: Opportunities Hub
+- **Unified `Opportunity` Model** supporting 16 categories: *Hackathon, Competition, Quiz, Case Study, Coding Challenge, Workshop, Webinar, Conference, Scholarship, Fellowship, Internship, Full-time Job, Part-time Job, Freelance Project, Mentorship Program, Campus Ambassador Role*.
+- Detailed pages with eligibility, prizes, countdown timers, stages/rounds, FAQs, and instant registration.
+- **Teammate Finder Bridge**: 1-click bridge from any hackathon opportunity directly to complement-based matching.
+
+### Phase 2: Jobs & Internships Portal
+- 15 verified company profiles with culture, perks, and active openings.
+- 40+ job & internship listings with salary/stipend filters, work modes, and selection stages.
+- **Skill-Based Recommendations**: Mathematical comparison of student proficiencies vs job requirements, explaining why it was recommended and identifying missing skills.
+- **Resume Builder**: 3 templates (*Modern, Minimal, Technical*), auto-fills from student profile, exportable to PDF, and supports multiple versions with a default selection.
+- **Job Alerts**: Configurable alerts notifying students when matching roles appear.
+
+### Phase 3: My Applications & Tracking
+- **My Space Tracking**: Real-time status pipeline (*Applied -> Under Review -> Shortlisted -> Interview -> Selected / Rejected / Withdrawn*).
+- Status timeline history with notes and interview dates.
+- Profile completeness progress meter.
+- Saved bookmarks for opportunities, jobs, and courses.
+
+### Phase 4: Learn: Courses & Skill Assessments
+- **Course Catalog**: 40+ courses spanning the 31 skills from the real dataset.
+- Module player with lessons, progress tracking, and knowledge quizzes.
+- **Skill Assessments**: 25 standardized benchmarks awarding Level 1–5 badges with instant certificate generation upon scoring 70%+.
+- **6 Curated Learning Paths**: Full Stack Developer, Machine Learning Engineer, Data Science Specialist, Cloud & DevOps, UI/UX Designer, and Cybersecurity Defense.
+- **Learn-to-Qualify Engine**: Analyzes a team's minimum required skill levels, detects where the student falls short, and outputs a 1-click course pathway to bridge the gap.
+
+### Phase 5: Certificates & Digital Portfolio
+- **Verifiable Credentials**: Auto-generated for course completions, hackathon wins, and passed assessments with unique credential IDs and QR codes.
+- **Public Verification**: `/verify/{id}` endpoint and public card verifying issuer, holder, issue date, and authentic status.
+- **Digital Portfolio (`/u/{username}`)**: Public showcase with verified skills, reliability ratings, peer review tags, hackathon team history, and downloadable PDF summary.
+- **Verified Skills**: Attach GitHub repositories, demo links, or assessment proofs to display a green "Verified" badge.
+
+### Phase 6: Community & Career Support
+- **Mentor Directory**: 30 verified senior practitioners with 1:1 slot booking.
+- **Alumni Network**: 40 verified graduates open to submitting internal job referrals.
+- **Technical Q&A Forums**: Opportunity-specific and skill-based discussion threads with upvotes and accepted answers.
+- **Campus Colleges & Clubs**: 10 top institutions and 15 student clubs (GDSC, ACM, E-Cell, AI Societies).
+- **Project Submissions**: Hackathon project submission portal (repos, live demos) with multi-criteria judging scores.
+
+### Phase 7: Role Portals (Organizer, Recruiter, Admin)
+- **Organizer Dashboard**: Host opportunities, view registrations, monitor the team formation funnel, and review applicants.
+- **Recruiter Portal**: Manage job postings, review applicant pipelines, and access **Talent Search over 1,050 students** filtered by verified skills, college, and certificates.
+- **Admin Dashboard**: System telemetry, verification requests, content moderation, and user management.
+
+### Phase 8: 17 Unique TeamUp Capabilities
+1. **Complement-Based Matching**: Rewards candidate skills that cover event gaps.
+2. **Team Skill-Gap Heatmap**: Current levels vs requirements; missing skills glow red.
+3. **"What If I Join?" Simulator**: Live mathematical before-vs-after preview of team coverage and capability boost.
+4. **Learn-to-Qualify Engine**: Closing skill gaps before applying.
+5. **Role-Slot Matching**: Hiring for specific open seats.
+6. **Team Balance Score**: Alerts when teams lack frontend, backend, or design.
+7. **Reliability Score (0-100)**: Peer-rated accountability after each event.
+8. **24-Hour Trial Sprint**: Low-friction mini-task evaluation before team lock-in.
+9. **Backup Bench Shortlist**: Ranked fallback roster for quick replacement.
+10. **Schedule Overlap Matrix**: Synchronizing sprint hours across availabilities.
+11. **Work-Style Health Check**: Telemetry from collaboration preferences.
+12. **AI Pitch & Role Split**: Auto-generated 60-second pitch hook and responsibilities.
+13. **Private Team Room**: Real-time team chat and Kanban task checklist.
+14. **Team Reuse**: Recommending next opportunities for finished squads.
+15. **Cross-College Open Seats**: Instant applications across 24 universities.
+16. **Beginner-Mentor Mode**: Safe onboarding with senior alumni guidance.
+17. **Explainable AI Transparency**: Mathematical justification on every card.
 
 ---
 
-## 📡 REST API Summary
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/auth/signup` | Student registration with automatic college verification |
-| `POST` | `/api/auth/login` | Login and receive JWT access token |
-| `GET` | `/api/auth/me` | Fetch authenticated student profile |
-| `GET/PUT` | `/api/profile` | View and update skills, work styles, and mentor flags |
-| `GET` | `/api/events` | List all hackathons with filter and search |
-| `GET` | `/api/events/{id}` | Hackathon event details and required roles |
-| `GET` | `/api/events/{id}/matches` | **AI Match Feed**: Ranked complement-based matches with explanations |
-| `GET` | `/api/events/{id}/seats` | Open seats board for an event |
-| `POST` | `/api/seats` | Post an open seat for a team (Verified lead only) |
-| `POST` | `/api/seats/{id}/apply` | 1-tap apply to join an open seat |
-| `GET` | `/api/teams/{id}` | Team detail and members |
-| `GET` | `/api/teams/{id}/gaps` | **Team Gap Analyzer**: missing roles and suggested candidates |
-| `GET/POST`| `/api/teams/{id}/messages` | In-app team chat |
-| `POST` | `/api/invites` | Send teammate invitation |
-| `PUT` | `/api/invites/{id}` | Accept or decline team invitation |
-| `POST` | `/api/feedback` | Post-event peer feedback and reliability update |
-| `POST` | `/api/report` | Report user confidentially |
-| `POST` | `/api/block` | Block user from match feed |
-| `GET` | `/api/icebreaker/{user_id}` | 10-minute collaborative icebreaker challenge & work-style breakdown |
+## ☁️ Deployment
 
----
-
-## 🏆 Prototype for ACE International Hackathon 5.0
-Developed for **AllCollegeEvent.com**. Branding and configuration can be customized in `app/config.py`.
+- **Render Blueprint**: Pre-configured `render.yaml` and `Procfile` ready for zero-downtime deployment.
+- **Vercel Serverless**: Configured `vercel.json` and `api/index.py` with automatic `/tmp` SQLite mirroring.
+- **GitHub Repository**: [https://github.com/furydarkknight/teamup-ace.git](https://github.com/furydarkknight/teamup-ace.git)

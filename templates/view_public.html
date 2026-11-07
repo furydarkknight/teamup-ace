@@ -1,0 +1,48 @@
+<!-- PUBLIC CREDENTIAL VERIFICATION (/verify/{id}) -->
+<section id="view-certificate-verify" class="hidden py-12">
+    <div id="cert-verify-card" class="max-w-xl mx-auto"></div>
+</section>
+
+<!-- PUBLIC DIGITAL PORTFOLIO (/u/{username}) -->
+<section id="view-portfolio" class="hidden space-y-6 py-6">
+    <div class="glass-card p-6 sm:p-8 rounded-3xl border border-slate-800">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+            <div class="flex items-center gap-4">
+                <img id="portfolio-avatar" src="" alt="Avatar" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-indigo-500/60 bg-slate-900">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 id="portfolio-name" class="text-xl sm:text-2xl font-black text-white"></h2>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800"><i class="fa-solid fa-check"></i> Verified</span>
+                    </div>
+                    <p id="portfolio-headline" class="text-xs sm:text-sm text-indigo-400 font-semibold mt-0.5"></p>
+                    <p id="portfolio-college" class="text-xs text-slate-400 mt-1"></p>
+                </div>
+            </div>
+            <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
+                <div class="text-left sm:text-right">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Reliability Score</span>
+                    <span id="portfolio-reliability" class="text-xl font-black text-emerald-400"></span>
+                </div>
+                <button onclick="window.print()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-download"></i> Download Portfolio PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="py-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">About & Engineering Bio</h4>
+            <p id="portfolio-bio" class="text-xs text-slate-300 leading-relaxed"></p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Skills & Verified Badges</h4>
+                <div id="portfolio-skills-list" class="space-y-2"></div>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Verified Certificates</h4>
+                <div id="portfolio-certs-list" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+</section>

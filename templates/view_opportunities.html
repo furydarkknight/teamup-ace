@@ -1,0 +1,142 @@
+<!-- OPPORTUNITIES HUB (PHASE 1) -->
+<section id="view-opportunities" class="hidden space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Opportunities Hub</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Discover 60+ hackathons, competitions, quizzes, case studies, workshops, and fellowships.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800/60">
+                16 Verified Categories
+            </span>
+        </div>
+    </div>
+
+    <!-- Category Filter Bar -->
+    <div class="glass-card p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 border border-slate-800">
+        <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Search Opportunities</label>
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
+                <input type="text" id="opp-search" oninput="loadOpportunities()" placeholder="Search by name, skill, or theme..." class="w-full pl-8 pr-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+            </div>
+        </div>
+        <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Opportunity Type</label>
+            <select id="opp-type-filter" onchange="loadOpportunities()" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                <option value="All">All 16 Types</option>
+                <option value="Hackathon">Hackathon</option>
+                <option value="Competition">Competition</option>
+                <option value="Quiz">Quiz</option>
+                <option value="Case Study">Case Study</option>
+                <option value="Coding Challenge">Coding Challenge</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Webinar">Webinar</option>
+                <option value="Conference">Conference</option>
+                <option value="Scholarship">Scholarship</option>
+                <option value="Fellowship">Fellowship</option>
+                <option value="Internship">Internship</option>
+                <option value="Full-time Job">Full-time Job</option>
+                <option value="Part-time Job">Part-time Job</option>
+                <option value="Freelance Project">Freelance Project</option>
+                <option value="Mentorship Program">Mentorship Program</option>
+                <option value="Campus Ambassador Role">Campus Ambassador Role</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Mode</label>
+            <select id="opp-mode-filter" onchange="loadOpportunities()" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                <option value="All">All Modes</option>
+                <option value="Online">Online</option>
+                <option value="Offline">In-Person</option>
+                <option value="Hybrid">Hybrid</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Opportunities Grid -->
+    <div id="opportunities-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    <div id="opp-pagination" class="pt-4 flex justify-center"></div>
+</section>
+
+<!-- OPPORTUNITY DETAIL VIEW -->
+<section id="view-opportunity-detail" class="hidden space-y-6">
+    <div class="glass-card rounded-2xl overflow-hidden border border-slate-800">
+        <div class="relative h-48 sm:h-64">
+            <img id="opp-detail-banner" src="" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
+            <div class="absolute top-4 left-4">
+                <button onclick="window.location.hash = '#opportunities'" class="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white text-xs font-semibold backdrop-blur transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-left"></i> All Opportunities
+                </button>
+            </div>
+            <div class="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <span id="opp-detail-type" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600 text-white"></span>
+                    <h1 id="opp-detail-title" class="text-2xl sm:text-4xl font-black text-white mt-2"></h1>
+                    <p class="text-xs sm:text-sm text-slate-300 mt-1 flex items-center gap-2">
+                        <i class="fa-solid fa-building-columns text-indigo-400"></i>
+                        <span id="opp-detail-organizer"></span>
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="opp-detail-save-btn" onclick="toggleSaveOpportunity(expansionState.currentOpp.id)" class="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-white text-xs font-semibold backdrop-blur border border-slate-700 transition">
+                        <i class="fa-regular fa-bookmark"></i> Save
+                    </button>
+                    <button onclick="registerForOpportunity(expansionState.currentOpp.id)" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition">
+                        Register / Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">About This Opportunity</h3>
+                    <p id="opp-detail-desc" class="text-sm text-slate-300 leading-relaxed"></p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Eligibility & Requirements</h3>
+                    <p id="opp-detail-eligibility" class="text-xs text-slate-300 bg-slate-900/60 p-4 rounded-xl border border-slate-800"></p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Key Skills Required</h3>
+                    <div id="opp-detail-skills" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="glass-card p-5 rounded-xl border border-slate-800 space-y-3 text-xs">
+                    <div class="flex justify-between text-slate-300 pb-2 border-b border-slate-800">
+                        <span class="text-slate-400">Prize Pool / Stipend</span>
+                        <span id="opp-detail-prize" class="font-bold text-amber-400"></span>
+                    </div>
+                    <div class="flex justify-between text-slate-300 pb-2 border-b border-slate-800">
+                        <span class="text-slate-400">Mode</span>
+                        <span id="opp-detail-mode" class="font-semibold text-white"></span>
+                    </div>
+                    <div class="flex justify-between text-slate-300 pb-2 border-b border-slate-800">
+                        <span class="text-slate-400">Venue</span>
+                        <span id="opp-detail-venue" class="font-semibold text-white"></span>
+                    </div>
+                    <div class="flex justify-between text-slate-300 pb-2 border-b border-slate-800">
+                        <span class="text-slate-400">Team Size</span>
+                        <span id="opp-detail-teamsize" class="font-semibold text-white"></span>
+                    </div>
+                    <div class="flex justify-between text-slate-300">
+                        <span class="text-slate-400">Deadline</span>
+                        <span id="opp-detail-deadline" class="font-bold text-rose-400"></span>
+                    </div>
+                </div>
+
+                <!-- Teammate Finder Bridge -->
+                <button id="opp-detail-find-teammates-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Find Teammates (AI Matcher)
+                </button>
+            </div>
+        </div>
+    </div>
+</section>

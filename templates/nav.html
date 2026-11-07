@@ -1,0 +1,149 @@
+<!-- TOP NAVIGATION & GLOBAL SEARCH -->
+<header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <!-- Brand -->
+        <div class="flex items-center gap-3 cursor-pointer shrink-0" onclick="window.location.hash = '#landing'">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                <i class="fa-solid fa-users-viewfinder text-white text-lg"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-lg font-black tracking-tight text-white font-sans">{{ app_name.split(' ')[0] }}</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800/60">by ACE</span>
+                </div>
+                <p class="text-[10px] text-slate-400 -mt-0.5 hidden sm:block">AI Team Finder & Collab</p>
+            </div>
+        </div>
+
+        <!-- Global Search Input with Autocomplete Dropdown -->
+        <div class="relative flex-1 max-w-md hidden md:block">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+            <input type="text" id="global-search-input" placeholder="Search opportunities, jobs, courses, teams, people..." class="w-full pl-8 pr-3 py-1.5 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition shadow-inner">
+            <div id="global-search-results" class="absolute top-10 left-0 right-0 glass-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden z-50 hidden max-h-96 overflow-y-auto"></div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="hidden lg:flex items-center gap-1">
+            <a href="#opportunities" class="nav-tab-link px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition">
+                Opportunities
+            </a>
+            <a href="#jobs" class="nav-tab-link px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition">
+                Jobs
+            </a>
+            <a href="#browse-teams" class="nav-tab-link px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition">
+                Teams
+            </a>
+            <a href="#learn" class="nav-tab-link px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition">
+                Learn
+            </a>
+            <a href="#community" class="nav-tab-link px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition">
+                Community
+            </a>
+            <a href="#myspace" class="nav-tab-link px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition">
+                My Space
+            </a>
+        </nav>
+
+        <!-- Right Side: Role Badge, Notifications & Auth -->
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <!-- Active Role Badge -->
+            <span id="nav-role-badge" class="hidden"></span>
+
+            <!-- Notifications Center Bell -->
+            <div class="relative">
+                <button onclick="toggleNotificationDropdown()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition relative" title="Notifications">
+                    <i class="fa-regular fa-bell text-sm"></i>
+                    <span id="notification-badge" class="hidden absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full flex items-center justify-center text-[9px] font-bold">0</span>
+                </button>
+                <!-- Notification Dropdown Menu -->
+                <div id="notification-dropdown" class="absolute right-0 top-12 w-80 glass-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden z-50 hidden">
+                    <div class="p-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Notifications</span>
+                        <button onclick="markAllNotificationsRead()" class="text-[10px] text-indigo-400 hover:underline">Mark all read</button>
+                    </div>
+                    <div id="notification-list" class="max-h-72 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Demo Role Quick Selector -->
+            <div class="relative group">
+                <button class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span class="hidden sm:inline">Role: Switch</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] opacity-70"></i>
+                </button>
+                <div class="absolute right-0 top-full mt-1 w-48 glass-card rounded-xl border border-slate-700 shadow-2xl p-1.5 space-y-1 hidden group-hover:block z-50">
+                    <button onclick="switchDemoRole('student')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-xs text-white font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-user-graduate text-indigo-400"></i> Student (Aarav)
+                    </button>
+                    <button onclick="switchDemoRole('organizer')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-xs text-white font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-check text-amber-400"></i> Organizer (DTU)
+                    </button>
+                    <button onclick="switchDemoRole('recruiter')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-xs text-white font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-briefcase text-emerald-400"></i> Recruiter (Nexus)
+                    </button>
+                    <button onclick="switchDemoRole('mentor')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-xs text-white font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-chalkboard-user text-purple-400"></i> Mentor (Vikram)
+                    </button>
+                    <button onclick="switchDemoRole('admin')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-xs text-white font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved text-rose-400"></i> Super Admin
+                    </button>
+                </div>
+            </div>
+
+            <!-- When Logged Out -->
+            <div id="auth-actions" class="flex items-center gap-1.5">
+                <button onclick="openModal('auth-modal')" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition">
+                    Sign In
+                </button>
+            </div>
+
+            <!-- When Logged In -->
+            <div id="user-menu" class="hidden flex items-center gap-2">
+                <div class="flex items-center gap-2 pl-2 border-l border-slate-800 cursor-pointer" onclick="openProfileModal()">
+                    <div class="relative">
+                        <img id="nav-user-avatar" src="" alt="Avatar" class="w-8 h-8 rounded-xl bg-slate-800 p-0.5 border border-slate-700">
+                        <span id="nav-user-verified" class="hidden absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 text-slate-950 rounded-full flex items-center justify-center text-[9px] font-bold">
+                            <i class="fa-solid fa-check"></i>
+                        </span>
+                    </div>
+                    <div class="hidden md:block text-left">
+                        <p id="nav-user-name" class="text-xs font-bold text-white truncate max-w-[120px]"></p>
+                        <p id="nav-user-reliability" class="text-[10px] text-slate-400"></p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition" title="Log Out">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- MOBILE BOTTOM TAB BAR (GLOBAL RULE) -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-slate-800/80 px-2 py-1.5 flex items-center justify-around text-center">
+    <a href="#landing" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-house text-sm"></i>
+        <span class="text-[9px] mt-0.5">Home</span>
+    </a>
+    <a href="#opportunities" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-trophy text-sm"></i>
+        <span class="text-[9px] mt-0.5">Opps</span>
+    </a>
+    <a href="#jobs" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-briefcase text-sm"></i>
+        <span class="text-[9px] mt-0.5">Jobs</span>
+    </a>
+    <a href="#browse-teams" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-users text-sm"></i>
+        <span class="text-[9px] mt-0.5">Teams</span>
+    </a>
+    <a href="#learn" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-graduation-cap text-sm"></i>
+        <span class="text-[9px] mt-0.5">Learn</span>
+    </a>
+    <a href="#myspace" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-user-circle text-sm"></i>
+        <span class="text-[9px] mt-0.5">My Space</span>
+    </a>
+</nav>

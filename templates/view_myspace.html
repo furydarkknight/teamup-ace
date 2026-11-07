@@ -1,0 +1,68 @@
+<!-- MY SPACE: APPLICATIONS, RESUMES & CERTIFICATES (PHASE 3) -->
+<section id="view-myspace" class="hidden space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">My Space</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Track your opportunity & job applications, build exportable resumes, and manage verified certificates.</p>
+        </div>
+        <div class="glass-card px-4 py-2.5 rounded-2xl border border-slate-800 flex items-center gap-3">
+            <div>
+                <div class="flex items-center justify-between text-[11px] text-slate-400 gap-4 mb-1">
+                    <span>Profile Completeness</span>
+                    <span id="profile-completeness-text" class="font-bold text-indigo-400">85%</span>
+                </div>
+                <div class="w-32 bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                    <div id="profile-completeness-bar" class="bg-indigo-500 h-full rounded-full" style="width: 85%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Status Filter Tabs -->
+    <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+        <button onclick="loadMyApplications('all')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-white">All Applications</button>
+        <button onclick="loadMyApplications('applied')" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Applied</button>
+        <button onclick="loadMyApplications('shortlisted')" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Shortlisted</button>
+        <button onclick="loadMyApplications('interview')" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Interview</button>
+        <button onclick="loadMyApplications('registered')" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Registered</button>
+        <button onclick="loadMyApplications('selected')" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Selected</button>
+    </div>
+
+    <!-- Applications List -->
+    <div id="myspace-applications-list" class="space-y-3"></div>
+
+    <!-- Resumes & Certificates Split Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
+        <!-- Resume Builder Section -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-white">Resume Builder</h3>
+                    <p class="text-xs text-slate-400">3 professional templates auto-filled from your profile.</p>
+                </div>
+                <button onclick="openModal('resume-create-modal')" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow">
+                    + New Resume
+                </button>
+            </div>
+            <div id="myspace-resumes-list" class="space-y-2.5"></div>
+        </div>
+
+        <!-- Verified Certificates Section -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-white">Earned Certificates</h3>
+                    <p class="text-xs text-slate-400">Public credentials with QR verification codes.</p>
+                </div>
+                <span class="text-xs text-amber-400 font-semibold"><i class="fa-solid fa-award mr-1"></i> Official Credentials</span>
+            </div>
+            <div id="myspace-certificates-list" class="space-y-2.5"></div>
+        </div>
+    </div>
+
+    <!-- Bookmarks / Saved Items Section -->
+    <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+        <h3 class="text-sm font-bold text-white">Saved Bookmarks</h3>
+        <div id="myspace-saved-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+    </div>
+</section>

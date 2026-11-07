@@ -32,88 +32,8 @@
 </head>
 <body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-600 selection:text-white">
 
-    <!-- TOP NAVIGATION -->
-    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <!-- Brand -->
-            <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.hash = '#landing'">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-                    <i class="fa-solid fa-users-viewfinder text-white text-lg"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-lg font-black tracking-tight text-white font-sans">{{ app_name.split(' ')[0] }}</span>
-                        <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800/60">by ACE</span>
-                    </div>
-                    <p class="text-[10px] text-slate-400 -mt-0.5 hidden sm:block">AI Team Finder & Collab</p>
-                </div>
-            </div>
-
-            <!-- Center Matcher Status Pill -->
-            <div class="hidden md:flex items-center" id="matcher-badge">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-950/70 text-indigo-300 border border-indigo-800/60">
-                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                    Modular Matcher Active
-                </span>
-            </div>
-
-            <!-- Nav Links & Auth CTA -->
-            <div class="flex items-center gap-2 sm:gap-3">
-                <a href="#events" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-calendar-days text-slate-400"></i> Hackathons
-                </a>
-
-                <a href="#browse-teams" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-users text-slate-400"></i> Browse Teams
-                </a>
-
-                <a href="#browse-students" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-user-graduate text-slate-400"></i> Browse Students
-                </a>
-
-                <a href="#my-teams" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-people-group text-slate-400"></i> My Teams
-                </a>
-
-                <button onclick="openInvitesModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-envelope text-slate-400"></i>
-                    <span class="hidden sm:inline">Invites</span>
-                </button>
-
-                <!-- Demo User One-Click Login Pill -->
-                <button id="demo-quick-btn" onclick="loginDemoUser()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-bolt text-amber-400"></i>
-                    <span>Instant Demo</span>
-                </button>
-
-                <!-- When Logged Out -->
-                <div id="auth-actions" class="flex items-center gap-1.5">
-                    <button onclick="openModal('auth-modal')" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition">
-                        Sign In
-                    </button>
-                </div>
-
-                <!-- When Logged In -->
-                <div id="user-menu" class="hidden flex items-center gap-2">
-                    <div class="flex items-center gap-2 pl-2 border-l border-slate-800 cursor-pointer" onclick="openProfileModal()">
-                        <div class="relative">
-                            <img id="nav-user-avatar" src="" alt="Avatar" class="w-8 h-8 rounded-xl bg-slate-800 p-0.5 border border-slate-700">
-                            <span id="nav-user-verified" class="hidden absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 text-slate-950 rounded-full flex items-center justify-center text-[9px] font-bold">
-                                <i class="fa-solid fa-check"></i>
-                            </span>
-                        </div>
-                        <div class="hidden md:block text-left">
-                            <p id="nav-user-name" class="text-xs font-bold text-white truncate max-w-[120px]"></p>
-                            <p id="nav-user-reliability" class="text-[10px] text-slate-400"></p>
-                        </div>
-                    </div>
-                    <button onclick="logout()" class="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition" title="Log Out">
-                        <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- TOP NAVIGATION & BOTTOM BAR -->
+    {% include 'nav.html' %}
 
     <!-- MAIN CONTENT CONTAINER (SPA VIEWS) -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -239,6 +159,9 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ONLY ON ACE TEAMUP (17 UNIQUE CAPABILITIES) -->
+            {% include 'section_unique_features.html' %}
         </section>
 
         <!-- 2. EVENTS DIRECTORY VIEW -->
@@ -563,6 +486,9 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ONLY ON ACE TEAMUP (17 UNIQUE CAPABILITIES) -->
+            {% include 'section_unique_features.html' %}
         </section>
 
         <!-- 5. BROWSE TEAMS VIEW -->
@@ -710,6 +636,15 @@
             </div>
             <div id="my-teams-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </section>
+
+        <!-- PLATFORM EXPANSION VIEWS (PHASES 1 - 8) -->
+        {% include 'view_opportunities.html' %}
+        {% include 'view_jobs.html' %}
+        {% include 'view_learn.html' %}
+        {% include 'view_myspace.html' %}
+        {% include 'view_community.html' %}
+        {% include 'view_portals.html' %}
+        {% include 'view_public.html' %}
     </main>
 
     <!-- FOOTER -->
@@ -1308,11 +1243,15 @@
         </div>
     </div>
 
+    <!-- WHAT IF I JOIN SIMULATOR MODAL -->
+    {% include 'modal_whatif.html' %}
+
     <!-- TOAST NOTIFICATIONS CONTAINER -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
 
     <!-- SCRIPT INCLUSION -->
-    <script src="/static/js/app.js?v=2.1"></script>
+    <script src="/static/js/app.js?v=2.2"></script>
+    <script src="/static/js/app_expansion.js?v=2.2"></script>
     <script>
         function toggleAuthTab(tab) {
             const isLogin = tab === 'login';

@@ -10,6 +10,10 @@ from app.database import engine, Base
 from app.migrations import run_migrations
 from app.routes import auth, profile, events, seats, invites, teams, feedback, safety, icebreaker
 from app.routes import meta, students, join_requests
+from app.routes import (
+    opportunities, jobs, resumes, applications, learn, certificates,
+    portfolio, community, portals, search, notifications, team_advanced
+)
 
 # Run safe migrations
 run_migrations()
@@ -55,6 +59,18 @@ app.include_router(icebreaker.router)
 app.include_router(meta.router)
 app.include_router(students.router)
 app.include_router(join_requests.router)
+app.include_router(opportunities.router)
+app.include_router(jobs.router)
+app.include_router(resumes.router)
+app.include_router(applications.router)
+app.include_router(learn.router)
+app.include_router(certificates.router)
+app.include_router(portfolio.router)
+app.include_router(community.router)
+app.include_router(portals.router)
+app.include_router(search.router)
+app.include_router(notifications.router)
+app.include_router(team_advanced.router)
 
 @app.get("/api/config")
 def get_app_config():
@@ -67,13 +83,17 @@ def get_app_config():
     }
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
-async def serve_index(request: Request):
+@app.get("/verify/{unique_id}", response_class=HTMLResponse)
+@app.get("/u/{username}", response_class=HTMLResponse)
+async def serve_index(request: Request, unique_id: str = None, username: str = None):
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "app_name": APP_NAME,
             "tagline": APP_TAGLINE,
-            "matcher": MATCHER_TYPE
+            "matcher": MATCHER_TYPE,
+            "verify_id": unique_id,
+            "portfolio_username": username
         }
     )

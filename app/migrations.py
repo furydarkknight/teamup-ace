@@ -9,7 +9,8 @@ from app.config import DATABASE_URL, BASE_DIR
 from app.database import engine, Base
 
 def run_migrations():
-    # 1. First ensure all new tables (like team_join_requests) are created
+    # 1. First ensure all models are registered on Base, then create new tables
+    import app.models
     Base.metadata.create_all(bind=engine)
 
     # 2. Extract database file path for SQLite
@@ -36,7 +37,13 @@ def run_migrations():
         ("preferred_roles_json", "TEXT DEFAULT '[]'"),
         ("preferred_team_size", "INTEGER DEFAULT 4"),
         ("collaboration_preference", "TEXT DEFAULT ''"),
-        ("bio", "TEXT DEFAULT ''")
+        ("bio", "TEXT DEFAULT ''"),
+        ("role", "TEXT DEFAULT 'student'"),
+        ("roles_json", "TEXT DEFAULT '[\"student\"]'"),
+        ("username", "TEXT"),
+        ("headline", "TEXT DEFAULT ''"),
+        ("company_name", "TEXT DEFAULT ''"),
+        ("points", "INTEGER DEFAULT 0")
     ]
     for col_name, col_def in user_columns_to_add:
         if col_name not in users_existing:
