@@ -1,219 +1,198 @@
-import os
-import pickle
-import numpy as np
-from pathlib import Path
-from typing import List, Dict, Any, Optional
+"""
+ML Matcher using sentence-transformers or sklearn/custom model with safe fallback.
+Models directory: models/ (or models/ace_teamup_model_v2/)
 
-from app.config import BASE_DIR, PREDEFINED_SKILLS, PREDEFINED_INTERESTS
+If model is missing or sentence_transformers not installed, falls back to RuleBasedMatcher.
+
+Feature schema: see models/feature_schema.json (229 features).
+Text profile encoding:
+  Student: "skills: {skills}. interests: {interests}. project_experience: {projects}. bio: {bio}. preferred_roles: {roles}. experience_level: {exp}"
+  Team:    "required_skills: {req}. preferred_skills: {pref}. interests: {interests}. preferred_roles: {roles}. preferred_experience: {exp}. collaboration_preference: {collab}"
+"""
+
+import os
+from pathlib import Path
+from typing import List, Any
+
+from app.config import BASE_DIR
 from matching.base import BaseMatcher, MatchResult
 from matching.rule_based import RuleBasedMatcher
 
-MODEL_PATH = BASE_DIR / "models" / "matcher.pkl"
+MODEL_DIR = BASE_DIR / "models"
 
 class MLMatcher(BaseMatcher):
     """
-    ML-based Matching Engine for TeamUp.
-    
-    This class loads a trained scikit-learn / XGBoost model from `models/matcher.pkl`.
-    If the model is not found, or if candidates count is too small (cold start),
-    it smoothly falls back to the RuleBasedMatcher while signaling this in the output.
-    
-    =============================================================================
-    FEATURE VECTOR FORMAT FOR ML TRAINING & INFERENCE:
-    Each candidate pair (user, candidate, event) is transformed into a 1D vector:
-      1. user_skills (len = len(PREDEFINED_SKILLS)): binary 0/1 indicator
-      2. cand_skills (len = len(PREDEFINED_SKILLS)): binary 0/1 indicator
-      3. event_roles (len = len(PREDEFINED_SKILLS)): binary 0/1 indicator
-      4. complement_vector = cand_skills * np.maximum(0, event_roles - user_skills)
-      5. availability_overlap: 1.0 (exact/flexible), 0.7 (compatible), 0.3 (different)
-      6. user_experience: 0 (Beginner), 1 (Intermediate), 2 (Advanced)
-      7. cand_experience: 0 (Beginner), 1 (Intermediate), 2 (Advanced)
-      8. goal_alignment: 1.0 (exact), 0.6 (complementary), 0.3 (different)
-      9. workstyle_schedule_match: 1.0 if match/flexible else 0.0
-      10. workstyle_role_synergy: 1.0 if (leader + executor) else 0.5
-      11. cand_reliability_score: float between 0.0 and 1.0
-    =============================================================================
+    ML-based Matcher for TeamUp.
+    Supports sentence-transformers embeddings (when available) or scikit-learn models,
+    with a graceful fallback to RuleBasedMatcher.
     """
 
     def __init__(self):
         self.model = None
-        self.fallback_matcher = RuleBasedMatcher()
+        self.fallback = RuleBasedMatcher()
         self._load_model()
 
     def _load_model(self):
-        """Loads trained model from models/matcher.pkl if present."""
-        if MODEL_PATH.exists():
-            try:
-                with open(MODEL_PATH, "rb") as f:
-                    self.model = pickle.load(f)
-                print(f"[MLMatcher] Successfully loaded trained model from {MODEL_PATH}")
-            except Exception as e:
-                print(f"[MLMatcher] Error loading model from {MODEL_PATH}: {e}. Using rule-based fallback.")
-                self.model = None
-        else:
-            self.model = None
+        # Check if modules.json or model.safetensors exists in models/ or models/ace_teamup_model_v2/
+        target_dir = None
+        if (MODEL_DIR / "modules.json").exists():
+            target_dir = MODEL_DIR
+        elif (MODEL_DIR / "ace_teamup_model_v2" / "modules.json").exists():
+            target_dir = MODEL_DIR / "ace_teamup_model_v2"
 
-    @staticmethod
-    def extract_feature_vector(user: Any, candidate: Any, event: Any) -> np.ndarray:
-        """
-        Transforms (user, candidate, event) into the exact numerical feature vector
-        documented above.
-        """
-        skill_map = {skill.lower(): i for i, skill in enumerate(PREDEFINED_SKILLS)}
-        n_skills = len(PREDEFINED_SKILLS)
-
-        # 1. user skills binary
-        user_skills_vec = np.zeros(n_skills, dtype=np.float32)
-        for s in user.skills:
-            name = s.get("name", "").lower()
-            for key, idx in skill_map.items():
-                if key in name or name in key:
-                    user_skills_vec[idx] = 1.0
-
-        # 2. candidate skills binary
-        cand_skills_vec = np.zeros(n_skills, dtype=np.float32)
-        for s in candidate.skills:
-            name = s.get("name", "").lower()
-            for key, idx in skill_map.items():
-                if key in name or name in key:
-                    cand_skills_vec[idx] = 1.0
-
-        # 3. event required roles binary
-        event_roles_vec = np.zeros(n_skills, dtype=np.float32)
-        if event and event.required_roles:
-            for r in event.required_roles:
-                r_lower = r.lower()
-                for key, idx in skill_map.items():
-                    if key in r_lower or r_lower in key:
-                        event_roles_vec[idx] = 1.0
-
-        # 4. complement vector: skills candidate covers that user lacks for event
-        missing_from_user = np.maximum(0.0, event_roles_vec - user_skills_vec)
-        complement_vec = cand_skills_vec * missing_from_user
-
-        # 5. availability
-        u_avail = (user.availability or "").lower()
-        c_avail = (candidate.availability or "").lower()
-        if "flexible" in u_avail or "flexible" in c_avail or u_avail == c_avail:
-            avail_score = 1.0
-        elif ("weekend" in u_avail and "evening" in c_avail) or ("evening" in u_avail and "weekend" in c_avail):
-            avail_score = 0.7
-        else:
-            avail_score = 0.3
-
-        # 6 & 7. experience
-        exp_map = {"beginner": 0.0, "intermediate": 1.0, "advanced": 2.0}
-        u_exp = exp_map.get((user.experience_level or "intermediate").lower(), 1.0)
-        c_exp = exp_map.get((candidate.experience_level or "intermediate").lower(), 1.0)
-
-        # 8. goal alignment
-        u_goal = (user.goal or "").lower()
-        c_goal = (candidate.goal or "").lower()
-        goal_score = 1.0 if u_goal == c_goal else (0.6 if ("win" in u_goal and "learn" in c_goal) else 0.4)
-
-        # 9 & 10. work style
-        sched_match = 1.0 if (user.work_schedule == candidate.work_schedule or "Flexible" in (user.work_schedule, candidate.work_schedule)) else 0.5
-        u_role = user.work_role or ""
-        c_role = candidate.work_role or ""
-        role_synergy = 1.0 if ("Leader" in u_role and "Executor" in c_role) or ("Executor" in u_role and "Leader" in c_role) else 0.6
-
-        # 11. reliability
-        cand_rel = float(candidate.reliability_score or 75.0) / 100.0
-
-        scalars = np.array([
-            avail_score,
-            u_exp,
-            c_exp,
-            goal_score,
-            sched_match,
-            role_synergy,
-            cand_rel
-        ], dtype=np.float32)
-
-        return np.concatenate([
-            user_skills_vec,
-            cand_skills_vec,
-            event_roles_vec,
-            complement_vec,
-            scalars
-        ])
-
-    def match(self, user: Any, event: Any, candidates: List[Any]) -> List[MatchResult]:
-        # Cold start handling: if fewer than 2 candidates, fallback to rule-based
-        if len(candidates) < 2:
-            results = self.fallback_matcher.match(user, event, candidates)
-            for r in results:
-                r.notes = "Cold-start condition (<2 candidates): Served via Rule-Based Matcher"
-            return results
-
-        # If trained model is not present, use rule-based fallback
-        if self.model is None:
-            results = self.fallback_matcher.match(user, event, candidates)
-            for r in results:
-                r.notes = "ML Model stub active (models/matcher.pkl not found). Using rule-based fallback with ML feature schema ready."
-            return results
-
-        # Model is present! Predict scores using the ML model
-        # =========================================================================
-        # TODO: CUSTOM ML INFERENCE LOGIC
-        # Your custom model (e.g. Scikit-Learn RandomForest, LightGBM, Neural Net)
-        # receives feature vectors of dimension:
-        # [batch_size, 4 * len(PREDEFINED_SKILLS) + 7]
-        # =========================================================================
-        feature_matrix = []
-        valid_candidates = []
-
-        for candidate in candidates:
-            if candidate.id == user.id:
-                continue
-            if candidate.id in (user.blocked_users or []):
-                continue
-            if user.id in (candidate.blocked_users or []):
-                continue
-
-            feat = self.extract_feature_vector(user, candidate, event)
-            feature_matrix.append(feat)
-            valid_candidates.append(candidate)
-
-        if not feature_matrix:
-            return []
-
-        X = np.array(feature_matrix)
+        if target_dir is None:
+            return
 
         try:
-            # Model prediction: either predict_proba[:, 1] for classification or predict() for regression
-            if hasattr(self.model, "predict_proba"):
-                raw_preds = self.model.predict_proba(X)[:, 1] * 100.0
-            else:
-                raw_preds = self.model.predict(X)
-                # Scale if normalized
-                if np.max(raw_preds) <= 1.0:
-                    raw_preds = raw_preds * 100.0
+            from sentence_transformers import SentenceTransformer
+            self.model = SentenceTransformer(str(target_dir))
+            print(f"[MLMatcher] Loaded sentence-transformers model from {target_dir}")
+        except ImportError:
+            print("[MLMatcher] sentence_transformers not installed. Using rule-based fallback.")
         except Exception as e:
-            print(f"[MLMatcher] Prediction error: {e}. Falling back to rule-based.")
-            return self.fallback_matcher.match(user, event, candidates)
+            print(f"[MLMatcher] Failed to load model: {e}. Using rule-based fallback.")
 
-        # Baseline rule explanations so the UI retains rich explainability
-        rule_results = {r.user_id: r for r in self.fallback_matcher.match(user, event, valid_candidates)}
+    @staticmethod
+    def _student_text(student: Any) -> str:
+        skills = ", ".join(str(s) for s in (getattr(student, 'skills', []) or []))
+        interests = ", ".join(str(i) for i in (getattr(student, 'interests', []) or []))
+        projects = "; ".join(str(p) for p in (getattr(student, 'project_experience', []) or []))
+        bio = getattr(student, 'bio', '') or getattr(student, 'short_bio', '') or ""
+        roles = ", ".join(str(r) for r in (getattr(student, 'preferred_roles', []) or []))
+        exp = getattr(student, 'experience_level', 'Intermediate') or 'Intermediate'
+        return f"skills: {skills}. interests: {interests}. project_experience: {projects}. bio: {bio}. preferred_roles: {roles}. experience_level: {exp}"
 
-        results: List[MatchResult] = []
-        for i, candidate in enumerate(valid_candidates):
-            ml_score = int(min(99, max(50, round(float(raw_preds[i])))))
-            base_res = rule_results.get(candidate.id)
-            
-            reasons = list(base_res.reasons) if base_res else []
-            reasons.insert(0, f"🤖 ML Model Match: Neural score {ml_score}% predicted from complement & compatibility vectors.")
+    @staticmethod
+    def _team_text(team: Any) -> str:
+        req = ", ".join(str(s) for s in (getattr(team, 'required_skills', []) or []))
+        pref = ", ".join(str(s) for s in (getattr(team, 'preferred_skills', []) or []))
+        interests = ", ".join(str(i) for i in (getattr(team, 'interests', []) or []))
+        roles = ", ".join(str(r) for r in (getattr(team, 'preferred_roles', []) or []))
+        exp = getattr(team, 'preferred_experience', 'Intermediate') or 'Intermediate'
+        collab = getattr(team, 'collaboration_preference', '') or ""
+        return f"required_skills: {req}. preferred_skills: {pref}. interests: {interests}. preferred_roles: {roles}. preferred_experience: {exp}. collaboration_preference: {collab}"
 
+    @staticmethod
+    def _cosine(a, b):
+        import numpy as np
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return float(np.dot(a, b) / (norm_a * norm_b))
+
+    def _ml_scores(self, student_text: str, team_texts: list) -> list:
+        all_texts = [student_text] + team_texts
+        embeddings = self.model.encode(all_texts, convert_to_numpy=True)
+        student_emb = embeddings[0]
+        team_embs = embeddings[1:]
+        return [self._cosine(student_emb, t_emb) for t_emb in team_embs]
+
+    def match_student_to_teams(self, student: Any, teams: List[Any]) -> List[MatchResult]:
+        student_members = set()
+        student_id_str = getattr(student, 'student_id', None)
+        if student_id_str:
+            for t in teams:
+                if student_id_str in (getattr(t, 'current_members', []) or []):
+                    student_members.add(getattr(t, 'id', -1))
+
+        eligible_teams = [
+            t for t in teams
+            if getattr(t, 'vacancies', 0) > 0 and getattr(t, 'id', -1) not in student_members
+        ]
+
+        if not eligible_teams:
+            return []
+
+        rule_results = {r.team_id: r for r in self.fallback.match_student_to_teams(student, eligible_teams)}
+
+        if self.model is None:
+            results = list(rule_results.values())
+            for r in results:
+                r.notes = "Rule-based scoring (ML model not loaded)"
+            return sorted(results, key=lambda x: x.score, reverse=True)
+
+        try:
+            student_text = self._student_text(student)
+            team_texts = [self._team_text(t) for t in eligible_teams]
+            similarities = self._ml_scores(student_text, team_texts)
+        except Exception as e:
+            print(f"[MLMatcher] Encoding error: {e}")
+            results = list(rule_results.values())
+            for r in results:
+                r.notes = f"Rule-based fallback (ML error: {e})"
+            return sorted(results, key=lambda x: x.score, reverse=True)
+
+        results = []
+        for i, team in enumerate(eligible_teams):
+            ml_score = int(min(98, max(30, round(similarities[i] * 100))))
+            base = rule_results.get(team.id if hasattr(team, 'id') else None)
+            reasons = list(base.reasons) if base else []
+            reasons.insert(0, f"AI Semantic Fit: {ml_score}% neural profile alignment.")
             results.append(MatchResult(
-                user_id=candidate.id,
+                user_id=student.id,
+                team_id=getattr(team, 'id', None),
                 score=ml_score,
                 reasons=reasons,
-                complementary_skills=base_res.complementary_skills if base_res else [],
-                shared_interests=base_res.shared_interests if base_res else [],
-                workstyle_compatibility=base_res.workstyle_compatibility if base_res else 75,
-                is_mentor_match=base_res.is_mentor_match if base_res else False,
-                notes="Scored by Trained ML Model (models/matcher.pkl)"
+                complementary_skills=base.complementary_skills if base else [],
+                shared_interests=base.shared_interests if base else [],
+                missing_skills_covered=base.missing_skills_covered if base else [],
+                notes="Scored by ace_teamup_model_v2 (sentence-transformers)"
             ))
 
         results.sort(key=lambda x: x.score, reverse=True)
+        return results
+
+    def match_team_to_students(self, team: Any, students: List[Any]) -> List[MatchResult]:
+        team_member_ids = {m.user_id for m in (getattr(team, 'members', []) or [])}
+        eligible = [s for s in students if s.id not in team_member_ids]
+
+        if not eligible:
+            return []
+
+        rule_results = {r.user_id: r for r in self.fallback.match_team_to_students(team, eligible)}
+
+        if self.model is None:
+            results = list(rule_results.values())
+            for r in results:
+                r.notes = "Rule-based scoring (ML model not loaded)"
+            return sorted(results, key=lambda x: x.score, reverse=True)
+
+        try:
+            team_text = self._team_text(team)
+            student_texts = [self._student_text(s) for s in eligible]
+            all_texts = [team_text] + student_texts
+            embeddings = self.model.encode(all_texts, convert_to_numpy=True)
+            team_emb = embeddings[0]
+            student_embs = embeddings[1:]
+            similarities = [self._cosine(team_emb, s_emb) for s_emb in student_embs]
+        except Exception as e:
+            print(f"[MLMatcher] Encoding error: {e}")
+            results = list(rule_results.values())
+            for r in results:
+                r.notes = f"Rule-based fallback (ML error: {e})"
+            return sorted(results, key=lambda x: x.score, reverse=True)
+
+        results = []
+        for i, student in enumerate(eligible):
+            ml_score = int(min(98, max(30, round(similarities[i] * 100))))
+            base = rule_results.get(student.id)
+            reasons = list(base.reasons) if base else []
+            reasons.insert(0, f"AI Semantic Fit: {ml_score}% neural candidate match.")
+            results.append(MatchResult(
+                user_id=student.id,
+                team_id=getattr(team, 'id', None),
+                score=ml_score,
+                reasons=reasons,
+                complementary_skills=base.complementary_skills if base else [],
+                shared_interests=base.shared_interests if base else [],
+                missing_skills_covered=base.missing_skills_covered if base else [],
+                notes="Scored by ace_teamup_model_v2 (sentence-transformers)"
+            ))
+
+        results.sort(key=lambda x: x.score, reverse=True)
+        return results
+
+    def match(self, user: Any, event: Any, candidates: List[Any]) -> List[MatchResult]:
+        results = self.fallback.match(user, event, candidates)
         return results

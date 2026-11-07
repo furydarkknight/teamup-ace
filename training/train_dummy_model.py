@@ -8,21 +8,20 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
 def train_model():
-    csv_path = PROJECT_ROOT / "training" / "teamup_match_dataset.csv"
+    csv_path = PROJECT_ROOT / "training" / "match_pairs_dataset.csv"
     if not csv_path.exists():
         print("Dataset CSV not found. Running export_dataset.py first...")
-        from training.export_dataset import export_dataset
-        export_dataset()
+        from training.export_dataset import export_student_team_dataset
+        export_student_team_dataset("training/match_pairs_dataset.csv")
 
     print(f"Loading training data from {csv_path}...")
     df = pd.read_csv(csv_path)
 
-    # Exclude metadata columns and label
-    meta_cols = ["user_id", "candidate_id", "event_id", "label_successful_team"]
+    meta_cols = ["student_id", "team_id", "label_successful_match"]
     feature_cols = [c for c in df.columns if c not in meta_cols]
 
     X = df[feature_cols].values
-    y = df["label_successful_team"].values
+    y = df["label_successful_match"].values
 
     print(f"Training RandomForestClassifier on {X.shape[0]} samples with {X.shape[1]} features...")
     model = RandomForestClassifier(n_estimators=50, random_state=42, max_depth=8)
@@ -36,7 +35,7 @@ def train_model():
         pickle.dump(model, f)
 
     print(f"[OK] Trained model successfully saved to: {model_path}")
-    print("You can now set MATCHER=ml in your .env file to run with this ML model!")
+    print("Feature schema: 229 features matching models/feature_schema.json")
 
 if __name__ == "__main__":
     train_model()

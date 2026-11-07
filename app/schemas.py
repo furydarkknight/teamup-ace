@@ -1,6 +1,20 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, Field
+
+# --- Meta Categories ---
+class CategoriesMetaResponse(BaseModel):
+    skills: List[str]
+    skill_groups: Dict[str, List[str]]
+    proficiency_levels: List[int]
+    proficiency_labels: Dict[int, str]
+    interests: List[str]
+    experience_levels: List[str]
+    availability: List[str]
+    preferred_team_sizes: List[int]
+    preferred_roles: List[str]
+    collaboration_preferences: List[str]
+    colleges: List[str]
 
 # --- Auth & User Schemas ---
 class SignUpRequest(BaseModel):
@@ -20,34 +34,34 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: Dict[str, Any]
 
-class SkillItem(BaseModel):
-    name: str
-    level: str = "Intermediate" # Beginner, Intermediate, Advanced
-
 class UserPublicResponse(BaseModel):
     id: int
+    student_id: Optional[str] = None
     name: str
     college: str
-    city: str
-    year: str
-    short_bio: str
+    city: Optional[str] = "Delhi"
+    year: Optional[str] = "3rd Year"
+    short_bio: Optional[str] = ""
+    bio: Optional[str] = ""
     avatar_url: str
     is_verified: bool
-    skills: List[Dict[str, Any]]
+    skills: List[str]
+    skill_proficiency: Dict[str, int] = {}
+    skills_items: Optional[List[Dict[str, Any]]] = []
     interests: List[str]
     experience_level: str
-    past_hackathons_count: int
-    github_url: str
-    linkedin_url: str
+    project_experience: List[str] = []
+    preferred_roles: List[str] = []
     availability: str
-    goal: str
-    work_schedule: str
-    work_role: str
-    work_vibe: str
-    is_mentor: bool
-    seeking_mentor: bool
-    reliability_score: float
-    ratings_count: int
+    preferred_team_size: int = 4
+    collaboration_preference: str = ""
+    past_hackathons_count: int = 0
+    github_url: Optional[str] = ""
+    linkedin_url: Optional[str] = ""
+    is_mentor: bool = False
+    seeking_mentor: bool = False
+    reliability_score: float = 0.0
+    ratings_count: int = 0
 
     class Config:
         from_attributes = True
@@ -57,19 +71,17 @@ class ProfileUpdateRequest(BaseModel):
     college: Optional[str] = None
     city: Optional[str] = None
     year: Optional[str] = None
-    short_bio: Optional[str] = None
+    bio: Optional[str] = None
     avatar_url: Optional[str] = None
-    skills: Optional[List[Dict[str, Any]]] = None
+    skills: Optional[List[str]] = None
+    skill_proficiency: Optional[Dict[str, int]] = None
     interests: Optional[List[str]] = None
     experience_level: Optional[str] = None
-    past_hackathons_count: Optional[int] = None
-    github_url: Optional[str] = None
-    linkedin_url: Optional[str] = None
+    project_experience: Optional[List[str]] = None
+    preferred_roles: Optional[List[str]] = None
     availability: Optional[str] = None
-    goal: Optional[str] = None
-    work_schedule: Optional[str] = None
-    work_role: Optional[str] = None
-    work_vibe: Optional[str] = None
+    preferred_team_size: Optional[int] = None
+    collaboration_preference: Optional[str] = None
     is_mentor: Optional[bool] = None
     seeking_mentor: Optional[bool] = None
 
@@ -94,7 +106,114 @@ class EventResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# --- Matching Schemas ---
+# --- Team Schemas ---
+class TeamMemberResponse(BaseModel):
+    id: int
+    user_id: int
+    student_id: Optional[str] = None
+    user: Optional[UserPublicResponse] = None
+    role: str
+    joined_at: datetime
+
+class TeamResponse(BaseModel):
+    id: int
+    team_id: Optional[str] = None
+    team_name: str
+    name: Optional[str] = None
+    college: str
+    current_members: List[str] = []
+    current_team_size: int = 1
+    vacancies: int = 3
+    current_skills: Dict[str, int] = {}
+    required_skills: List[str] = []
+    preferred_skills: List[str] = []
+    skill_requirements: Dict[str, int] = {}
+    interests: List[str] = []
+    preferred_experience: str = "Intermediate"
+    availability: str = "Full-time"
+    preferred_roles: List[str] = []
+    team_description: Optional[str] = ""
+    tagline: Optional[str] = ""
+    collaboration_preference: Optional[str] = ""
+    leader_id: Optional[int] = None
+    pitch: Optional[str] = ""
+    event_id: Optional[int] = None
+    event_name: Optional[str] = None
+    members: List[TeamMemberResponse] = []
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class TeamCreate(BaseModel):
+    team_name: str
+    college: Optional[str] = None
+    required_skills: List[str]
+    preferred_skills: Optional[List[str]] = []
+    skill_requirements: Dict[str, int]
+    interests: Optional[List[str]] = []
+    preferred_experience: Optional[str] = "Intermediate"
+    availability: Optional[str] = "Full-time"
+    preferred_roles: Optional[List[str]] = []
+    team_description: Optional[str] = ""
+    collaboration_preference: Optional[str] = ""
+    vacancies: Optional[int] = 3
+    event_id: Optional[int] = 1
+
+class TeamUpdate(BaseModel):
+    team_name: Optional[str] = None
+    required_skills: Optional[List[str]] = None
+    preferred_skills: Optional[List[str]] = None
+    skill_requirements: Optional[Dict[str, int]] = None
+    interests: Optional[List[str]] = None
+    preferred_experience: Optional[str] = None
+    availability: Optional[str] = None
+    preferred_roles: Optional[List[str]] = None
+    team_description: Optional[str] = None
+    collaboration_preference: Optional[str] = None
+    vacancies: Optional[int] = None
+
+# --- Join Requests ---
+class TeamJoinRequestCreate(BaseModel):
+    message: Optional[str] = "Interested in joining your team!"
+
+class TeamJoinRequestResponse(BaseModel):
+    id: int
+    team_id: int
+    team_name: str
+    user_id: int
+    student_id: Optional[str] = None
+    student_name: str
+    student_avatar: str
+    message: str
+    status: str
+    created_at: datetime
+
+class JoinRequestUpdateStatus(BaseModel):
+    status: str # "accepted" or "declined"
+
+# --- Recommendations / Matches ---
+class RecommendedTeamResponse(BaseModel):
+    id: int
+    team_id: Optional[str] = None
+    score: int
+    reasons: List[str]
+    complementary_skills: List[str]
+    shared_interests: List[str]
+    missing_skills_covered: List[str]
+    team: TeamResponse
+
+class RecommendedStudentResponse(BaseModel):
+    id: int
+    student_id: Optional[str] = None
+    score: int
+    reasons: List[str]
+    complementary_skills: List[str]
+    shared_interests: List[str]
+    missing_skills_covered: List[str]
+    student: UserPublicResponse
+
+# Existing event match response
 class MatchResultResponse(BaseModel):
     user_id: int
     user: UserPublicResponse
@@ -102,25 +221,18 @@ class MatchResultResponse(BaseModel):
     reasons: List[str]
     complementary_skills: List[str]
     shared_interests: List[str]
-    workstyle_compatibility: int # 0-100
+    missing_skills_covered: Optional[List[str]] = []
+    workstyle_compatibility: int = 75
     is_mentor_match: bool = False
     notes: Optional[str] = None
 
-# --- Open Seats Schemas ---
+# --- Open Seats & Applications ---
 class OpenSeatCreate(BaseModel):
     team_id: int
     event_id: int
     role_title: str
     required_skills: List[str]
     short_note: Optional[str] = ""
-
-class SeatApplicationResponse(BaseModel):
-    id: int
-    user_id: int
-    user: UserPublicResponse
-    note: str
-    status: str
-    created_at: datetime
 
 class OpenSeatResponse(BaseModel):
     id: int
@@ -138,7 +250,18 @@ class OpenSeatResponse(BaseModel):
 class SeatApplyRequest(BaseModel):
     note: Optional[str] = "I'd love to join your team for this role!"
 
-# --- Invites Schemas ---
+class SeatApplicationResponse(BaseModel):
+    id: int
+    user_id: int
+    user: UserPublicResponse
+    note: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Invites ---
 class InviteCreate(BaseModel):
     receiver_id: int
     event_id: int
@@ -164,32 +287,7 @@ class InviteResponse(BaseModel):
     status: str
     created_at: datetime
 
-# --- Team Schemas ---
-class TeamCreate(BaseModel):
-    event_id: int
-    name: str
-    tagline: Optional[str] = ""
-    pitch: Optional[str] = ""
-    leader_role: Optional[str] = "Team Lead / Full Stack"
-
-class TeamMemberResponse(BaseModel):
-    id: int
-    user_id: int
-    user: UserPublicResponse
-    role: str
-    joined_at: datetime
-
-class TeamResponse(BaseModel):
-    id: int
-    event_id: int
-    event_name: str
-    name: str
-    tagline: str
-    leader_id: int
-    pitch: str
-    members: List[TeamMemberResponse]
-    created_at: datetime
-
+# --- Team Chat & Gap Analysis ---
 class TeamGapCandidate(BaseModel):
     role: str
     user: UserPublicResponse
@@ -198,10 +296,13 @@ class TeamGapCandidate(BaseModel):
 
 class TeamGapAnalysisResponse(BaseModel):
     team_id: int
-    event_id: int
-    required_roles: List[str]
-    covered_roles: List[str]
-    missing_roles: List[str]
+    event_id: Optional[int] = None
+    required_skills: List[str]
+    skill_requirements: Dict[str, int]
+    current_skills: Dict[str, int]
+    missing_skills: List[str]
+    covered_skills: List[str]
+    skill_comparison: List[Dict[str, Any]]
     suggested_role_split: Dict[str, str]
     ai_generated_pitch: str
     suggested_candidates: List[TeamGapCandidate]
@@ -218,7 +319,7 @@ class TeamMessageResponse(BaseModel):
     content: str
     created_at: datetime
 
-# --- Feedback & Safety Schemas ---
+# --- Feedback & Safety ---
 class FeedbackCreate(BaseModel):
     event_id: int
     team_id: int
@@ -234,3 +335,16 @@ class ReportCreate(BaseModel):
 
 class BlockUserRequest(BaseModel):
     user_id: int
+
+# --- Pagination Wrappers ---
+class PaginatedTeamsResponse(BaseModel):
+    items: List[TeamResponse]
+    total: int
+    page: int
+    pages: int
+
+class PaginatedStudentsResponse(BaseModel):
+    items: List[UserPublicResponse]
+    total: int
+    page: int
+    pages: int

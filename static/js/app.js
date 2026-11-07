@@ -19,12 +19,24 @@ const state = {
     chatInterval: null,
     icebreakerTimer: null,
     icebreakerSecondsLeft: 600,
-    config: null
+    config: null,
+    categories: null,
+    browseTeams: { page: 1, pages: 1, total: 0, items: [] },
+    browseStudents: { page: 1, pages: 1, total: 0, items: [] },
+    recommendedTeams: [],
+    profileSkillsMap: {},
+    profileRolesSet: new Set(),
+    profileInterestsSet: new Set(),
+    profileCollabPref: '',
+    createTeamSkillsMap: {},
+    createTeamRolesSet: new Set(),
+    createTeamInterestsSet: new Set()
 };
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
     await fetchConfig();
+    await fetchCategories();
     if (state.token) {
         await fetchCurrentUser();
     }
@@ -57,6 +69,62 @@ async function fetchConfig() {
         }
     } catch (err) {
         console.error('Config fetch failed:', err);
+    }
+}
+
+async function fetchCategories() {
+    try {
+        const res = await fetch(`${API_BASE}/meta/categories`);
+        if (res.ok) {
+            state.categories = await res.json();
+            populateCategoryDropdowns();
+        }
+    } catch (err) {
+        console.error('Failed to load categories:', err);
+    }
+}
+
+function populateCategoryDropdowns() {
+    if (!state.categories) return;
+    const cats = state.categories;
+
+    const collegeSelects = ['filter-team-college', 'filter-student-college', 'create-team-college', 'profile-edit-college'];
+    collegeSelects.forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel) {
+            const curVal = sel.value;
+            sel.innerHTML = `<option value="">${id.includes('create') || id.includes('profile') ? 'Select College' : 'All Colleges'}</option>` +
+                cats.colleges.map(c => `<option value="${c}">${c}</option>`).join('');
+            if (curVal) sel.value = curVal;
+        }
+    });
+
+    const skillSelects = ['filter-team-skill', 'filter-student-skill'];
+    skillSelects.forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel) {
+            const curVal = sel.value;
+            sel.innerHTML = `<option value="">All Required Skills</option>` +
+                cats.skills.map(s => `<option value="${s}">${s}</option>`).join('');
+            if (curVal) sel.value = curVal;
+        }
+    });
+
+    const roleSelects = ['filter-team-role', 'filter-student-role'];
+    roleSelects.forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel) {
+            const curVal = sel.value;
+            sel.innerHTML = `<option value="">All Preferred Roles</option>` +
+                cats.preferred_roles.map(r => `<option value="${r}">${r}</option>`).join('');
+            if (curVal) sel.value = curVal;
+        }
+    });
+
+    const collabSelect = document.getElementById('create-team-collab');
+    if (collabSelect) {
+        collabSelect.innerHTML = `<option value="">Select Working Dynamic</option>` +
+            cats.collaboration_preferences.map(cp => `<option value="${cp}">${cp}</option>`).join('');
     }
 }
 
@@ -216,6 +284,10 @@ function handleHashRouting() {
         showLandingView();
     } else if (hash === '#events') {
         showEventsView();
+    } else if (hash === '#browse-teams') {
+        showBrowseTeamsView();
+    } else if (hash === '#browse-students') {
+        showBrowseStudentsView();
     } else if (hash.startsWith('#event-')) {
         const eventId = parseInt(hash.replace('#event-', ''));
         showEventDetailView(eventId);
@@ -237,6 +309,10 @@ function hideAllViews() {
     document.getElementById('view-event-detail').classList.add('hidden');
     document.getElementById('view-team-dashboard').classList.add('hidden');
     document.getElementById('view-my-teams').classList.add('hidden');
+    const bTeams = document.getElementById('view-browse-teams');
+    if (bTeams) bTeams.classList.add('hidden');
+    const bStudents = document.getElementById('view-browse-students');
+    if (bStudents) bStudents.classList.add('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -866,43 +942,82 @@ function renderTeamDashboard(team, gaps) {
     // GAP ANALYZER RENDER
     const gapContainer = document.getElementById('team-gap-analyzer-content');
     if (gapContainer && gaps) {
-        const missingHtml = gaps.missing_roles.length > 0 
-            ? gaps.missing_roles.map(r => `
+        // Skill Comparison Radar / Bar Chart
+        let skillBarsHtml = '';
+        if (gaps.skill_comparison && gaps.skill_comparison.length > 0) {
+            skillBarsHtml = `
+                <div class="space-y-3 mb-4">
+                    <p class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-column text-indigo-400"></i> Skill-Gap Proficiency Radar
+                    </p>
+                    <div class="space-y-2.5">
+                        ${gaps.skill_comparison.map(item => {
+                            const curPct = Math.min(100, (item.current_level / 5) * 100);
+                            const reqPct = Math.min(100, (item.required_level / 5) * 100);
+                            const barColor = item.covered ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-rose-500 to-amber-500';
+                            return `
+                                <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+                                    <div class="flex items-center justify-between text-xs">
+                                        <span class="font-bold text-white">${item.skill}</span>
+                                        ${item.covered 
+                                            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">Covered (${item.current_level}/5)</span>`
+                                            : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">Gap: -${item.gap} (Has: ${item.current_level}, Needs: ${item.required_level})</span>`}
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <div class="flex justify-between text-[10px] text-slate-400">
+                                            <span>Team: Level ${item.current_level}</span>
+                                            <span>Min Required: Level ${item.required_level}</span>
+                                        </div>
+                                        <div class="w-full h-2 rounded-full bg-slate-800 relative overflow-hidden">
+                                            <div class="h-full rounded-full ${barColor} transition-all duration-500" style="width: ${curPct}%;"></div>
+                                            <div class="absolute top-0 bottom-0 w-1 bg-amber-400 shadow" style="left: calc(${reqPct}% - 2px);" title="Target: Level ${item.required_level}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        const missingHtml = (gaps.missing_skills || gaps.missing_roles || []).length > 0 
+            ? (gaps.missing_skills || gaps.missing_roles).map(r => `
                 <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-950/80 text-rose-300 border border-rose-800/80 flex items-center gap-1.5">
-                    <i class="fa-solid fa-circle-exclamation text-rose-400"></i> MISSING: ${r}
+                    <i class="fa-solid fa-circle-exclamation text-rose-400"></i> GAP: ${r}
                 </span>
               `).join('')
             : `<span class="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
-                <i class="fa-solid fa-circle-check"></i> Complete Team! All event required roles covered.
+                <i class="fa-solid fa-circle-check"></i> Complete Coverage! All team requirements met.
                </span>`;
 
-        const coveredHtml = gaps.covered_roles.map(r => `
+        const coveredHtml = (gaps.covered_skills || gaps.covered_roles || []).map(r => `
             <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 flex items-center gap-1.5">
                 <i class="fa-solid fa-check text-emerald-400"></i> ${r}
             </span>
         `).join('');
 
-        // Suggested candidates to bridge missing roles
+        // Suggested candidates to bridge missing roles/skills
         const suggestedHtml = gaps.suggested_candidates && gaps.suggested_candidates.length > 0
             ? `
                 <div class="mt-4 pt-4 border-t border-slate-800">
                     <p class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Suggested Candidates to Fill Gaps:
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Suggested Candidates to Bridge Gaps:
                     </p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         ${gaps.suggested_candidates.map(sc => `
                             <div class="p-3 rounded-xl bg-slate-900/90 border border-indigo-900/40 flex items-center justify-between gap-3">
                                 <div class="flex items-center gap-2.5 overflow-hidden">
-                                    <img src="${sc.user.avatar_url}" class="w-9 h-9 rounded-lg bg-slate-800 flex-shrink-0">
+                                    <img src="${sc.user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + sc.user.id}" class="w-9 h-9 rounded-lg bg-slate-800 flex-shrink-0">
                                     <div class="truncate">
                                         <div class="flex items-center gap-1">
                                             <span class="text-xs font-bold text-white truncate">${sc.user.name}</span>
                                             <span class="text-[10px] px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 font-semibold">${sc.score}%</span>
                                         </div>
-                                        <p class="text-[11px] text-emerald-400 font-medium truncate">Fills role: ${sc.role}</p>
+                                        <p class="text-[11px] text-emerald-400 font-medium truncate">${sc.reason || 'Bridges gap: ' + sc.role}</p>
                                     </div>
                                 </div>
-                                <button onclick="openInviteModal(${sc.user.id}, '${sc.user.name}', ${team.id}, '${sc.role}')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex-shrink-0 transition">
+                                <button onclick="openInviteModal(${sc.user.id}, '${sc.user.name.replace(/'/g, "\\'")}', ${team.id}, '${sc.role}')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex-shrink-0 transition">
                                     Invite
                                 </button>
                             </div>
@@ -913,15 +1028,16 @@ function renderTeamDashboard(team, gaps) {
             : '';
 
         gapContainer.innerHTML = `
-            <div class="space-y-3">
+            <div class="space-y-4">
+                ${skillBarsHtml}
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Current Role Coverage:</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Covered Competencies:</p>
                     <div class="flex flex-wrap gap-2">
                         ${coveredHtml}
                     </div>
                 </div>
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Identified Team Gaps:</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Remaining Skill Gaps:</p>
                     <div class="flex flex-wrap gap-2">
                         ${missingHtml}
                     </div>
@@ -930,6 +1046,9 @@ function renderTeamDashboard(team, gaps) {
             </div>
         `;
     }
+
+    // Load Join Requests for Team Lead
+    loadTeamJoinRequests(team.id);
 
     // Suggested Role Split
     const splitContainer = document.getElementById('team-role-split-list');
@@ -1353,60 +1472,207 @@ async function openProfileModal() {
     document.getElementById('profile-edit-college').value = u.college || '';
     document.getElementById('profile-edit-city').value = u.city || '';
     document.getElementById('profile-edit-year').value = u.year || '';
-    document.getElementById('profile-edit-bio').value = u.short_bio || '';
+    document.getElementById('profile-edit-bio').value = u.bio || u.short_bio || '';
     document.getElementById('profile-edit-exp').value = u.experience_level || 'Intermediate';
     document.getElementById('profile-edit-past-hackathons').value = u.past_hackathons_count || 0;
-    document.getElementById('profile-edit-avail').value = u.availability || 'Weekends';
-    document.getElementById('profile-edit-goal').value = u.goal || 'Win Grand Prize';
-    document.getElementById('profile-edit-schedule').value = u.work_schedule || 'Night Owl';
-    document.getElementById('profile-edit-role').value = u.work_role || 'Executor / Builder';
-    document.getElementById('profile-edit-vibe').value = u.work_vibe || 'Competitive / Serious';
+    document.getElementById('profile-edit-avail').value = u.availability || 'Full-time';
+    document.getElementById('profile-edit-team-size').value = u.preferred_team_size || 4;
     document.getElementById('profile-edit-mentor').checked = !!u.is_mentor;
     document.getElementById('profile-edit-seeking-mentor').checked = !!u.seeking_mentor;
 
-    // Populate skills chips
-    const skillsStr = u.skills.map(s => `${s.name} (${s.level})`).join(', ');
-    document.getElementById('profile-edit-skills').value = skillsStr;
-
-    // Interests
-    document.getElementById('profile-edit-interests').value = (u.interests || []).join(', ');
+    renderProfileSkillsGrouped();
+    renderProfileRolesPicker();
+    renderProfileInterestsPicker();
+    renderProfileCollabCards();
 
     openModal('profile-modal');
 }
 
+function renderProfileSkillsGrouped() {
+    const container = document.getElementById('profile-skills-grouped-container');
+    if (!container || !state.categories) return;
+
+    const userProf = state.user?.skill_proficiency || {};
+    state.profileSkillsMap = { ...userProf };
+
+    // Also support array skills
+    if (state.user?.skills && Array.isArray(state.user.skills)) {
+        state.user.skills.forEach(s => {
+            const skillName = typeof s === 'string' ? s : s.name;
+            if (!(skillName in state.profileSkillsMap)) {
+                state.profileSkillsMap[skillName] = typeof s === 'object' && s.level ? parseInt(s.level) || 3 : 3;
+            }
+        });
+    }
+
+    const groups = state.categories.skill_groups || {};
+    container.innerHTML = Object.entries(groups).map(([groupName, skills]) => `
+        <div class="space-y-1.5 pb-2.5 border-b border-slate-800/80 last:border-0">
+            <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">${groupName}</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${skills.map(skill => {
+                    const hasSkill = skill in state.profileSkillsMap;
+                    const level = state.profileSkillsMap[skill] || 3;
+                    const safeKey = skill.replace(/[^a-zA-Z0-9]/g, '_');
+                    return `
+                        <div class="p-2 rounded-lg bg-slate-950/80 border ${hasSkill ? 'border-indigo-600' : 'border-slate-800'} flex flex-col gap-1 transition" id="prof-skill-card-${safeKey}">
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs ${hasSkill ? 'text-white font-bold' : 'text-slate-400'}">
+                                    <input type="checkbox" onchange="toggleProfileSkill('${skill}', this.checked)" ${hasSkill ? 'checked' : ''} class="rounded text-indigo-600 bg-slate-900 border-slate-700">
+                                    <span>${skill}</span>
+                                </label>
+                                <span class="text-[10px] font-semibold text-amber-400" id="prof-skill-level-lbl-${safeKey}">
+                                    ${hasSkill ? 'Level ' + level + '/5' : ''}
+                                </span>
+                            </div>
+                            <div class="${hasSkill ? '' : 'hidden'} pt-1" id="prof-skill-slider-wrap-${safeKey}">
+                                <input type="range" min="1" max="5" value="${level}" oninput="setProfileSkillLevel('${skill}', this.value)" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleProfileSkill(skill, isChecked) {
+    const safeKey = skill.replace(/[^a-zA-Z0-9]/g, '_');
+    const wrap = document.getElementById(`prof-skill-slider-wrap-${safeKey}`);
+    const lbl = document.getElementById(`prof-skill-level-lbl-${safeKey}`);
+    const card = document.getElementById(`prof-skill-card-${safeKey}`);
+
+    if (isChecked) {
+        state.profileSkillsMap[skill] = state.profileSkillsMap[skill] || 3;
+        if (wrap) wrap.classList.remove('hidden');
+        if (lbl) lbl.innerText = `Level ${state.profileSkillsMap[skill]}/5`;
+        if (card) {
+            card.classList.remove('border-slate-800');
+            card.classList.add('border-indigo-600');
+        }
+    } else {
+        delete state.profileSkillsMap[skill];
+        if (wrap) wrap.classList.add('hidden');
+        if (lbl) lbl.innerText = '';
+        if (card) {
+            card.classList.remove('border-indigo-600');
+            card.classList.add('border-slate-800');
+        }
+    }
+}
+
+function setProfileSkillLevel(skill, val) {
+    const level = parseInt(val) || 1;
+    state.profileSkillsMap[skill] = level;
+    const safeKey = skill.replace(/[^a-zA-Z0-9]/g, '_');
+    const lbl = document.getElementById(`prof-skill-level-lbl-${safeKey}`);
+    if (lbl) lbl.innerText = `Level ${level}/5`;
+}
+
+function renderProfileRolesPicker() {
+    const container = document.getElementById('profile-roles-container');
+    if (!container || !state.categories) return;
+    state.profileRolesSet = new Set(state.user?.preferred_roles || []);
+
+    container.innerHTML = state.categories.preferred_roles.map(role => {
+        const isSelected = state.profileRolesSet.has(role);
+        return `
+            <button type="button" onclick="toggleProfileRole('${role}', this)" class="px-2.5 py-1 rounded-lg text-xs font-medium border transition ${isSelected ? 'bg-purple-950 text-purple-200 border-purple-600' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'}">
+                ${role}
+            </button>
+        `;
+    }).join('');
+}
+
+function toggleProfileRole(role, btn) {
+    if (state.profileRolesSet.has(role)) {
+        state.profileRolesSet.delete(role);
+        btn.className = 'px-2.5 py-1 rounded-lg text-xs font-medium border transition bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700';
+    } else {
+        state.profileRolesSet.add(role);
+        btn.className = 'px-2.5 py-1 rounded-lg text-xs font-medium border transition bg-purple-950 text-purple-200 border-purple-600';
+    }
+}
+
+function renderProfileInterestsPicker() {
+    const container = document.getElementById('profile-interests-container');
+    if (!container || !state.categories) return;
+    state.profileInterestsSet = new Set(state.user?.interests || []);
+
+    container.innerHTML = state.categories.interests.map(interest => {
+        const isSelected = state.profileInterestsSet.has(interest);
+        return `
+            <button type="button" onclick="toggleProfileInterest('${interest}', this)" class="px-2.5 py-1 rounded-lg text-xs font-medium border transition ${isSelected ? 'bg-amber-950 text-amber-200 border-amber-600' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'}">
+                ${interest}
+            </button>
+        `;
+    }).join('');
+}
+
+function toggleProfileInterest(interest, btn) {
+    if (state.profileInterestsSet.has(interest)) {
+        state.profileInterestsSet.delete(interest);
+        btn.className = 'px-2.5 py-1 rounded-lg text-xs font-medium border transition bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700';
+    } else {
+        state.profileInterestsSet.add(interest);
+        btn.className = 'px-2.5 py-1 rounded-lg text-xs font-medium border transition bg-amber-950 text-amber-200 border-amber-600';
+    }
+}
+
+function renderProfileCollabCards() {
+    const container = document.getElementById('profile-collab-cards-container');
+    if (!container || !state.categories) return;
+    state.profileCollabPref = state.user?.collaboration_preference || '';
+
+    container.innerHTML = state.categories.collaboration_preferences.map(sentence => {
+        const isSelected = state.profileCollabPref === sentence;
+        return `
+            <div onclick="selectProfileCollab('${sentence.replace(/'/g, "\\'")}', this)" class="p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-start gap-2 ${isSelected ? 'bg-emerald-950/60 border-emerald-500 text-white font-medium' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'}">
+                <i class="fa-solid fa-check-circle mt-0.5 ${isSelected ? 'text-emerald-400' : 'text-slate-600'}"></i>
+                <span class="leading-snug">${sentence}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function selectProfileCollab(sentence, el) {
+    state.profileCollabPref = sentence;
+    const cards = document.getElementById('profile-collab-cards-container')?.children || [];
+    for (const card of cards) {
+        card.className = 'p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-start gap-2 bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700';
+        const icon = card.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-check-circle mt-0.5 text-slate-600';
+    }
+    el.className = 'p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-start gap-2 bg-emerald-950/60 border-emerald-500 text-white font-medium';
+    const icon = el.querySelector('i');
+    if (icon) icon.className = 'fa-solid fa-check-circle mt-0.5 text-emerald-400';
+}
+
 async function handleProfileSave(e) {
     e.preventDefault();
-    const skillsRaw = document.getElementById('profile-edit-skills').value;
-    const skillsParsed = skillsRaw.split(',').map(s => {
-        const trimmed = s.trim();
-        if (!trimmed) return null;
-        if (trimmed.includes('(')) {
-            const parts = trimmed.split('(');
-            return { name: parts[0].trim(), level: parts[1].replace(')', '').trim() };
-        }
-        return { name: trimmed, level: 'Intermediate' };
-    }).filter(Boolean);
 
-    const interestsRaw = document.getElementById('profile-edit-interests').value;
-    const interests = interestsRaw.split(',').map(i => i.trim()).filter(Boolean);
+    const selectedSkills = Object.keys(state.profileSkillsMap);
+    const skillProficiency = { ...state.profileSkillsMap };
+    const preferredRoles = Array.from(state.profileRolesSet);
+    const interests = Array.from(state.profileInterestsSet);
 
     const updatePayload = {
         name: document.getElementById('profile-edit-name').value,
         college: document.getElementById('profile-edit-college').value,
         city: document.getElementById('profile-edit-city').value,
         year: document.getElementById('profile-edit-year').value,
-        short_bio: document.getElementById('profile-edit-bio').value,
+        bio: document.getElementById('profile-edit-bio').value,
         experience_level: document.getElementById('profile-edit-exp').value,
-        past_hackathons_count: parseInt(document.getElementById('profile-edit-past-hackathons').value || '0'),
         availability: document.getElementById('profile-edit-avail').value,
-        goal: document.getElementById('profile-edit-goal').value,
-        work_schedule: document.getElementById('profile-edit-schedule').value,
-        work_role: document.getElementById('profile-edit-role').value,
-        work_vibe: document.getElementById('profile-edit-vibe').value,
+        preferred_team_size: parseInt(document.getElementById('profile-edit-team-size').value || '4'),
+        past_hackathons_count: parseInt(document.getElementById('profile-edit-past-hackathons').value || '0'),
+        collaboration_preference: state.profileCollabPref,
+        skills: selectedSkills,
+        skill_proficiency: skillProficiency,
+        preferred_roles: preferredRoles,
+        interests: interests,
         is_mentor: document.getElementById('profile-edit-mentor').checked,
-        seeking_mentor: document.getElementById('profile-edit-seeking-mentor').checked,
-        skills: skillsParsed,
-        interests: interests
+        seeking_mentor: document.getElementById('profile-edit-seeking-mentor').checked
     };
 
     try {
@@ -1425,10 +1691,14 @@ async function handleProfileSave(e) {
         updateNavAuthUI();
         closeModal('profile-modal');
         showToast('Profile updated! Matching engine adjusted.', 'success');
+        if (window.location.hash === '#browse-teams') {
+            loadRecommendedTeams();
+        }
         if (state.currentEvent) loadEventMatches();
     } catch (err) {
         showToast(err.message, 'error');
     }
+}
 }
 
 async function openPublicProfileModal(userId) {
@@ -1570,4 +1840,664 @@ function showToast(message, type = 'info') {
         toast.style.transition = 'all 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 4000);
+}
+
+// =========================================================================
+// --- BROWSE TEAMS, BROWSE STUDENTS, JOIN REQUESTS, CREATE TEAM ---
+// =========================================================================
+
+// --- BROWSE TEAMS ---
+let teamSearchDebounce = null;
+function debounceTeamSearch() {
+    clearTimeout(teamSearchDebounce);
+    teamSearchDebounce = setTimeout(() => {
+        state.browseTeams.page = 1;
+        loadBrowseTeams(1);
+    }, 300);
+}
+
+function applyTeamFilters() {
+    state.browseTeams.page = 1;
+    loadBrowseTeams(1);
+}
+
+function resetTeamFilters() {
+    const s = document.getElementById('filter-team-search'); if (s) s.value = '';
+    const c = document.getElementById('filter-team-college'); if (c) c.value = '';
+    const sk = document.getElementById('filter-team-skill'); if (sk) sk.value = '';
+    const r = document.getElementById('filter-team-role'); if (r) r.value = '';
+    const a = document.getElementById('filter-team-avail'); if (a) a.value = '';
+    const e = document.getElementById('filter-team-exp'); if (e) e.value = '';
+    const v = document.getElementById('filter-team-vacancies'); if (v) v.checked = true;
+    state.browseTeams.page = 1;
+    loadBrowseTeams(1);
+}
+
+async function showBrowseTeamsView() {
+    document.getElementById('view-browse-teams').classList.remove('hidden');
+    loadRecommendedTeams();
+    loadBrowseTeams(state.browseTeams.page || 1);
+}
+
+async function loadRecommendedTeams() {
+    const container = document.getElementById('recommended-teams-carousel');
+    if (!container) return;
+    if (!state.token) {
+        container.innerHTML = `<div class="text-xs text-slate-400 py-4 text-center col-span-3">
+            <button onclick="loginDemoUser()" class="text-amber-400 underline font-semibold">Sign in</button> to view AI-matched teams tailored to your profile.
+        </div>`;
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/me/recommended-teams?per_page=3`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        state.recommendedTeams = data.items || [];
+        renderRecommendedTeamsList(state.recommendedTeams);
+    } catch (err) {
+        console.error('Failed to load recommended teams:', err);
+    }
+}
+
+function renderRecommendedTeamsList(items) {
+    const container = document.getElementById('recommended-teams-carousel');
+    if (!container) return;
+    if (items.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 py-3 text-center col-span-3">No recommended teams found for your current skills.</div>`;
+        return;
+    }
+
+    container.innerHTML = items.map(match => {
+        const t = match.team;
+        const scoreColor = match.score >= 80 ? 'from-emerald-600 to-teal-600' : (match.score >= 60 ? 'from-indigo-600 to-purple-600' : 'from-amber-600 to-orange-600');
+        const reasonsHtml = (match.reasons || []).slice(0, 2).map(r => `
+            <p class="text-[11px] text-indigo-300 leading-snug"><i class="fa-solid fa-sparkles text-amber-400 mr-1"></i>${r}</p>
+        `).join('');
+
+        const reqSkillsHtml = (t.required_skills || []).slice(0, 4).map(s => `
+            <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">${s}</span>
+        `).join('');
+
+        return `
+            <div class="glass-card rounded-xl p-4 border border-indigo-800/60 flex flex-col justify-between space-y-3 relative overflow-hidden">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between gap-1.5">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r ${scoreColor} text-white shadow-sm">
+                            ${match.score}% Match
+                        </span>
+                        <span class="text-[10px] text-emerald-400 font-semibold">${t.vacancies} open</span>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-white hover:text-indigo-400 cursor-pointer" onclick="navigateToTeam(${t.id})">${t.team_name || t.name}</h4>
+                        <p class="text-[11px] text-slate-400 truncate">${t.college}</p>
+                    </div>
+
+                    <div class="space-y-1 bg-slate-900/70 p-2 rounded-lg border border-slate-800">
+                        ${reasonsHtml}
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-semibold text-slate-400 uppercase">Needs Skills:</p>
+                        <div class="flex flex-wrap gap-1">
+                            ${reqSkillsHtml}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                    <button onclick="navigateToTeam(${t.id})" class="text-xs text-slate-400 hover:text-white transition">Details</button>
+                    <button onclick="requestJoinTeam(${t.id})" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1">
+                        <i class="fa-solid fa-paper-plane text-[10px]"></i> Apply
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadBrowseTeams(page = 1) {
+    const container = document.getElementById('teams-browse-grid');
+    if (!container) return;
+    container.innerHTML = `<div class="col-span-3 text-center py-12 text-slate-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin text-lg text-indigo-500 mb-2 block"></i> Loading teams...</div>`;
+
+    const search = document.getElementById('filter-team-search')?.value || '';
+    const college = document.getElementById('filter-team-college')?.value || '';
+    const skill = document.getElementById('filter-team-skill')?.value || '';
+    const role = document.getElementById('filter-team-role')?.value || '';
+    const avail = document.getElementById('filter-team-avail')?.value || '';
+    const exp = document.getElementById('filter-team-exp')?.value || '';
+    const vacanciesOnly = document.getElementById('filter-team-vacancies')?.checked !== false;
+
+    const params = new URLSearchParams({
+        page: page,
+        per_page: 18,
+        vacancies_gt_0: vacanciesOnly
+    });
+    if (search) params.append('skill', search);
+    if (college) params.append('college', college);
+    if (skill) params.append('skill', skill);
+    if (role) params.append('role', role);
+    if (avail) params.append('availability', avail);
+    if (exp) params.append('experience', exp);
+
+    try {
+        const res = await fetch(`${API_BASE}/teams/browse?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to load teams');
+        const data = await res.json();
+        state.browseTeams = data;
+        renderBrowseTeamsList(data);
+        renderPagination('teams-pagination', data.page, data.pages, loadBrowseTeams);
+    } catch (err) {
+        container.innerHTML = `<div class="col-span-3 text-center py-8 text-rose-400 text-xs">${err.message}</div>`;
+    }
+}
+
+function renderBrowseTeamsList(data) {
+    const container = document.getElementById('teams-browse-grid');
+    if (!container) return;
+    if (data.items.length === 0) {
+        container.innerHTML = `<div class="col-span-3 text-center py-12 text-slate-400 text-xs">No teams match your filter criteria. Try broadening your search.</div>`;
+        return;
+    }
+
+    container.innerHTML = data.items.map(team => {
+        const skillsChips = (team.required_skills || []).slice(0, 4).map(s => {
+            const minLvl = (team.skill_requirements && team.skill_requirements[s]) ? `L${team.skill_requirements[s]}` : '';
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-950/70 text-indigo-300 border border-indigo-800/60">${s} ${minLvl ? '<span class="text-amber-400 font-bold ml-0.5">' + minLvl + '</span>' : ''}</span>`;
+        }).join('');
+
+        const rolesChips = (team.preferred_roles || []).slice(0, 2).map(r => `
+            <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-950/70 text-purple-300 border border-purple-800/60">${r}</span>
+        `).join('');
+
+        const totalSlots = (team.current_team_size || 1) + (team.vacancies || 0);
+
+        return `
+            <div class="glass-card rounded-2xl p-5 border-slate-800 hover:border-indigo-600/60 transition flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">${team.team_id || 'TEAM'}</span>
+                            <h3 class="text-base font-bold text-white hover:text-indigo-400 cursor-pointer" onclick="navigateToTeam(${team.id})">${team.team_name || team.name}</h3>
+                            <p class="text-xs text-indigo-300/80 mt-0.5 truncate max-w-[220px]"><i class="fa-solid fa-building-columns text-[10px] mr-1"></i>${team.college}</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${team.vacancies > 0 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}">
+                            ${team.vacancies > 0 ? team.vacancies + ' open' : 'Full'}
+                        </span>
+                    </div>
+
+                    ${team.team_description ? `<p class="text-xs text-slate-300 line-clamp-2 italic">${team.team_description}</p>` : ''}
+
+                    <div class="space-y-1.5">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Required Skills (Min Level):</p>
+                        <div class="flex flex-wrap gap-1">
+                            ${skillsChips || '<span class="text-[10px] text-slate-500">None specified</span>'}
+                        </div>
+                    </div>
+
+                    ${rolesChips ? `
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hiring Roles:</p>
+                        <div class="flex flex-wrap gap-1">${rolesChips}</div>
+                    </div>` : ''}
+
+                    <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+                        <span><i class="fa-solid fa-clock mr-1 text-slate-500"></i>${team.availability}</span>
+                        <span><i class="fa-solid fa-users mr-1 text-slate-500"></i>${team.current_team_size}/${totalSlots} members</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-slate-800 gap-2">
+                    <button onclick="navigateToTeam(${team.id})" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition font-medium">
+                        View Team
+                    </button>
+                    ${team.vacancies > 0 ? `
+                        <button onclick="requestJoinTeam(${team.id})" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1">
+                            <i class="fa-solid fa-user-plus text-[10px]"></i> Join Team
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function requestJoinTeam(teamId) {
+    if (!state.token) {
+        showToast('Please sign in or use Demo Login to apply.', 'warning');
+        openModal('auth-modal');
+        return;
+    }
+
+    const note = prompt('Add a quick message to the team lead (optional):', 'Hey! I would love to join your squad for the hackathon.');
+    if (note === null) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/teams/${teamId}/join-request`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({ message: note || 'Interested in joining your team!' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Join request failed');
+        showToast('Application submitted to team lead!', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- BROWSE STUDENTS ---
+let studentSearchDebounce = null;
+function debounceStudentSearch() {
+    clearTimeout(studentSearchDebounce);
+    studentSearchDebounce = setTimeout(() => {
+        state.browseStudents.page = 1;
+        loadBrowseStudents(1);
+    }, 300);
+}
+
+function applyStudentFilters() {
+    state.browseStudents.page = 1;
+    loadBrowseStudents(1);
+}
+
+function resetStudentFilters() {
+    const s = document.getElementById('filter-student-search'); if (s) s.value = '';
+    const c = document.getElementById('filter-student-college'); if (c) c.value = '';
+    const sk = document.getElementById('filter-student-skill'); if (sk) sk.value = '';
+    const r = document.getElementById('filter-student-role'); if (r) r.value = '';
+    const a = document.getElementById('filter-student-avail'); if (a) a.value = '';
+    const e = document.getElementById('filter-student-exp'); if (e) e.value = '';
+    const g = document.getElementById('filter-student-gap-team'); if (g) g.value = '';
+    state.browseStudents.page = 1;
+    loadBrowseStudents(1);
+}
+
+async function showBrowseStudentsView() {
+    document.getElementById('view-browse-students').classList.remove('hidden');
+    loadBrowseStudents(state.browseStudents.page || 1);
+    populateTeamGapSelect();
+}
+
+async function populateTeamGapSelect() {
+    const sel = document.getElementById('filter-student-gap-team');
+    if (!sel || !state.token) return;
+    try {
+        const res = await fetch(`${API_BASE}/teams?my_teams_only=true`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        if (res.ok) {
+            const teams = await res.json();
+            sel.innerHTML = '<option value="">Fills My Team\'s Gaps (Select Team)</option>' +
+                teams.map(t => `<option value="${t.id}">Fills gap for: ${t.team_name || t.name}</option>`).join('');
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function loadBrowseStudents(page = 1) {
+    const container = document.getElementById('students-browse-grid');
+    if (!container) return;
+    container.innerHTML = `<div class="col-span-3 text-center py-12 text-slate-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin text-lg text-purple-500 mb-2 block"></i> Loading talent pool...</div>`;
+
+    if (!state.token) {
+        container.innerHTML = `<div class="col-span-3 text-center py-12 text-slate-400 text-xs">
+            <button onclick="loginDemoUser()" class="text-amber-400 underline font-semibold">Sign in</button> to browse verified students and recruit teammates.
+        </div>`;
+        return;
+    }
+
+    const search = document.getElementById('filter-student-search')?.value || '';
+    const college = document.getElementById('filter-student-college')?.value || '';
+    const skill = document.getElementById('filter-student-skill')?.value || '';
+    const role = document.getElementById('filter-student-role')?.value || '';
+    const avail = document.getElementById('filter-student-avail')?.value || '';
+    const exp = document.getElementById('filter-student-exp')?.value || '';
+    const gapTeamId = document.getElementById('filter-student-gap-team')?.value || '';
+
+    const params = new URLSearchParams({
+        page: page,
+        per_page: 18
+    });
+    if (search) params.append('skill', search);
+    if (college) params.append('college', college);
+    if (skill) params.append('skill', skill);
+    if (role) params.append('role', role);
+    if (avail) params.append('availability', avail);
+    if (exp) params.append('experience', exp);
+    if (gapTeamId) params.append('fills_gap_for_team_id', gapTeamId);
+
+    try {
+        const res = await fetch(`${API_BASE}/students?${params.toString()}`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        if (!res.ok) throw new Error('Failed to load students');
+        const data = await res.json();
+        state.browseStudents = data;
+        renderBrowseStudentsList(data);
+        renderPagination('students-pagination', data.page, data.pages, loadBrowseStudents);
+    } catch (err) {
+        container.innerHTML = `<div class="col-span-3 text-center py-8 text-rose-400 text-xs">${err.message}</div>`;
+    }
+}
+
+function renderBrowseStudentsList(data) {
+    const container = document.getElementById('students-browse-grid');
+    if (!container) return;
+    if (data.items.length === 0) {
+        container.innerHTML = `<div class="col-span-3 text-center py-12 text-slate-400 text-xs">No students match your filter criteria.</div>`;
+        return;
+    }
+
+    container.innerHTML = data.items.map(student => {
+        const prof = student.skill_proficiency || {};
+        const skillsChips = (student.skills || []).slice(0, 5).map(s => {
+            const lvl = prof[s] || 3;
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">${s} <span class="text-amber-400 font-bold ml-0.5">★${lvl}</span></span>`;
+        }).join('');
+
+        const rolesChips = (student.preferred_roles || []).slice(0, 2).map(r => `
+            <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-950/70 text-purple-300 border border-purple-800/60">${r}</span>
+        `).join('');
+
+        return `
+            <div class="glass-card rounded-2xl p-5 border-slate-800 hover:border-purple-600/60 transition flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <img src="${student.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + student.id}" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700">
+                                ${student.is_verified ? '<span class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 text-slate-950 rounded-full flex items-center justify-center text-[10px] font-bold"><i class="fa-solid fa-check"></i></span>' : ''}
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h3 class="text-sm font-bold text-white">${student.name}</h3>
+                                    ${student.student_id ? '<span class="text-[10px] text-slate-500 font-mono">' + student.student_id + '</span>' : ''}
+                                </div>
+                                <p class="text-xs text-indigo-300/80 truncate max-w-[180px]"><i class="fa-solid fa-graduation-cap text-[10px] mr-1"></i>${student.college}</p>
+                                <p class="text-[11px] text-slate-500">${student.experience_level} • ${student.availability}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-emerald-400">${Math.round(student.reliability_score || 75)}</span>
+                            <span class="text-[9px] text-slate-500 block -mt-1">Reliability</span>
+                        </div>
+                    </div>
+
+                    ${student.bio ? `<p class="text-xs text-slate-300 line-clamp-2 italic">"${student.bio}"</p>` : ''}
+
+                    <div class="space-y-1.5">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Skills & Proficiency (1-5):</p>
+                        <div class="flex flex-wrap gap-1">
+                            ${skillsChips || '<span class="text-[10px] text-slate-500">None specified</span>'}
+                        </div>
+                    </div>
+
+                    ${rolesChips ? `
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Preferred Roles:</p>
+                        <div class="flex flex-wrap gap-1">${rolesChips}</div>
+                    </div>` : ''}
+
+                    ${student.collaboration_preference ? `
+                    <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80 text-[11px] text-slate-400 line-clamp-1">
+                        <i class="fa-solid fa-handshake text-indigo-400 mr-1"></i>${student.collaboration_preference}
+                    </div>` : ''}
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-slate-800 gap-2">
+                    <button onclick="openPublicProfileModal(${student.id})" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition font-medium">
+                        Inspect
+                    </button>
+                    <button onclick="openInviteModal(${student.id}, '${student.name.replace(/'/g, "\\'")}', null, '')" class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1">
+                        <i class="fa-solid fa-paper-plane text-[10px]"></i> Invite
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPagination(elementId, currentPage, totalPages, onPageChange) {
+    const container = document.getElementById(elementId);
+    if (!container || totalPages <= 1) {
+        if (container) container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <button onclick="${onPageChange.name}(${Math.max(1, currentPage - 1)})" ${currentPage === 1 ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300"' : 'class="hover:bg-slate-800 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 transition"'} >
+            <i class="fa-solid fa-chevron-left text-xs mr-1"></i> Prev
+        </button>
+        <span class="text-xs text-slate-400 px-3">Page ${currentPage} of ${totalPages}</span>
+        <button onclick="${onPageChange.name}(${Math.min(totalPages, currentPage + 1)})" ${currentPage === totalPages ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300"' : 'class="hover:bg-slate-800 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 transition"'} >
+            Next <i class="fa-solid fa-chevron-right text-xs ml-1"></i>
+        </button>
+    `;
+}
+
+// --- TEAM JOIN REQUESTS MANAGEMENT ---
+async function loadTeamJoinRequests(teamId) {
+    const card = document.getElementById('team-join-requests-card');
+    const list = document.getElementById('team-join-requests-list');
+    const countBadge = document.getElementById('team-join-requests-count');
+    if (!card || !list || !state.token) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/teams/${teamId}/join-requests`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        if (!res.ok) {
+            card.classList.add('hidden');
+            return;
+        }
+        const requests = await res.json();
+        const pending = requests.filter(r => r.status === 'pending');
+        if (countBadge) countBadge.innerText = pending.length;
+
+        if (pending.length === 0) {
+            card.classList.add('hidden');
+            return;
+        }
+
+        card.classList.remove('hidden');
+        list.innerHTML = pending.map(r => `
+            <div class="p-3 rounded-xl bg-slate-900/80 border border-indigo-900/40 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <img src="${r.student_avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + r.user_id}" class="w-7 h-7 rounded-lg bg-slate-800 flex-shrink-0">
+                        <div class="truncate">
+                            <span class="text-xs font-bold text-white">${r.student_name}</span>
+                            <span class="text-[10px] text-slate-400 block">${r.student_id || ''}</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-300 italic">"${r.message}"</p>
+                <div class="flex items-center justify-end gap-1.5 pt-1">
+                    <button onclick="handleJoinRequestDecision(${r.id}, 'declined', ${teamId})" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-[11px] font-semibold transition">
+                        Decline
+                    </button>
+                    <button onclick="handleJoinRequestDecision(${r.id}, 'accepted', ${teamId})" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md transition">
+                        Accept & Add
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('Error loading join requests:', err);
+    }
+}
+
+async function handleJoinRequestDecision(requestId, decision, teamId) {
+    try {
+        const res = await fetch(`${API_BASE}/join-requests/${requestId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({ status: decision })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to update request');
+        showToast(decision === 'accepted' ? 'Teammate accepted! Roster and skills updated.' : 'Request declined.', 'info');
+        showTeamDashboardView(teamId);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// --- CREATE TEAM ---
+function openCreateTeamModal() {
+    if (!state.token) {
+        showToast('Please sign in or use Demo Login to create a team.', 'warning');
+        openModal('auth-modal');
+        return;
+    }
+    state.createTeamSkillsMap = {};
+    state.createTeamRolesSet = new Set();
+    state.createTeamInterestsSet = new Set();
+
+    const picker = document.getElementById('create-team-skills-picker');
+    if (picker && state.categories) {
+        picker.innerHTML = state.categories.skills.map(skill => {
+            const safeKey = skill.replace(/[^a-zA-Z0-9]/g, '_');
+            return `
+                <div class="flex items-center justify-between p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                        <input type="checkbox" onchange="toggleCreateTeamSkill('${skill}', this.checked)" class="rounded text-indigo-600 bg-slate-900 border-slate-700">
+                        <span>${skill}</span>
+                    </label>
+                    <div id="create-team-lvl-wrap-${safeKey}" class="hidden flex items-center gap-2">
+                        <span class="text-[10px] text-amber-400 font-bold" id="create-team-lvl-lbl-${safeKey}">Min Level 3</span>
+                        <input type="range" min="1" max="5" value="3" oninput="setCreateTeamSkillLevel('${skill}', this.value)" class="w-16 h-1 bg-slate-800 rounded accent-indigo-500">
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    const rolesPicker = document.getElementById('create-team-roles-picker');
+    if (rolesPicker && state.categories) {
+        rolesPicker.innerHTML = state.categories.preferred_roles.map(r => `
+            <button type="button" onclick="toggleCreateTeamRole('${r}', this)" class="px-2 py-0.5 rounded text-[11px] font-medium border border-slate-800 text-slate-400 hover:border-slate-700">
+                ${r}
+            </button>
+        `).join('');
+    }
+
+    const intPicker = document.getElementById('create-team-interests-picker');
+    if (intPicker && state.categories) {
+        intPicker.innerHTML = state.categories.interests.map(i => `
+            <button type="button" onclick="toggleCreateTeamInterest('${i}', this)" class="px-2 py-0.5 rounded text-[11px] font-medium border border-slate-800 text-slate-400 hover:border-slate-700">
+                ${i}
+            </button>
+        `).join('');
+    }
+
+    if (state.user && state.user.college) {
+        const cCol = document.getElementById('create-team-college');
+        if (cCol) cCol.value = state.user.college;
+    }
+
+    openModal('create-team-modal');
+}
+
+function toggleCreateTeamSkill(skill, isChecked) {
+    const safeKey = skill.replace(/[^a-zA-Z0-9]/g, '_');
+    const wrap = document.getElementById(`create-team-lvl-wrap-${safeKey}`);
+    if (isChecked) {
+        state.createTeamSkillsMap[skill] = 3;
+        if (wrap) wrap.classList.remove('hidden');
+    } else {
+        delete state.createTeamSkillsMap[skill];
+        if (wrap) wrap.classList.add('hidden');
+    }
+}
+
+function setCreateTeamSkillLevel(skill, val) {
+    const level = parseInt(val) || 1;
+    state.createTeamSkillsMap[skill] = level;
+    const safeKey = skill.replace(/[^a-zA-Z0-9]/g, '_');
+    const lbl = document.getElementById(`create-team-lvl-lbl-${safeKey}`);
+    if (lbl) lbl.innerText = `Min Level ${level}`;
+}
+
+function toggleCreateTeamRole(role, btn) {
+    if (state.createTeamRolesSet.has(role)) {
+        state.createTeamRolesSet.delete(role);
+        btn.className = 'px-2 py-0.5 rounded text-[11px] font-medium border border-slate-800 text-slate-400 hover:border-slate-700';
+    } else {
+        state.createTeamRolesSet.add(role);
+        btn.className = 'px-2 py-0.5 rounded text-[11px] font-medium border bg-purple-950 text-purple-200 border-purple-600';
+    }
+}
+
+function toggleCreateTeamInterest(interest, btn) {
+    if (state.createTeamInterestsSet.has(interest)) {
+        state.createTeamInterestsSet.delete(interest);
+        btn.className = 'px-2 py-0.5 rounded text-[11px] font-medium border border-slate-800 text-slate-400 hover:border-slate-700';
+    } else {
+        state.createTeamInterestsSet.add(interest);
+        btn.className = 'px-2 py-0.5 rounded text-[11px] font-medium border bg-amber-950 text-amber-200 border-amber-600';
+    }
+}
+
+async function handleCreateTeamSubmit(e) {
+    e.preventDefault();
+    const teamName = document.getElementById('create-team-name').value;
+    const college = document.getElementById('create-team-college').value;
+    const desc = document.getElementById('create-team-desc').value;
+    const vacancies = parseInt(document.getElementById('create-team-vacancies').value || '3');
+    const exp = document.getElementById('create-team-exp').value;
+    const avail = document.getElementById('create-team-avail').value;
+    const collab = document.getElementById('create-team-collab').value;
+
+    const requiredSkills = Object.keys(state.createTeamSkillsMap);
+    const skillReqs = { ...state.createTeamSkillsMap };
+    const preferredRoles = Array.from(state.createTeamRolesSet);
+    const interests = Array.from(state.createTeamInterestsSet);
+
+    if (requiredSkills.length === 0) {
+        showToast('Please select at least one required skill for your team.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/teams`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({
+                team_name: teamName,
+                college: college,
+                team_description: desc,
+                vacancies: vacancies,
+                preferred_experience: exp,
+                availability: avail,
+                collaboration_preference: collab,
+                required_skills: requiredSkills,
+                skill_requirements: skillReqs,
+                preferred_roles: preferredRoles,
+                interests: interests
+            })
+        });
+        const newTeam = await res.json();
+        if (!res.ok) throw new Error(newTeam.detail || 'Failed to create team');
+
+        closeModal('create-team-modal');
+        showToast(`Team '${newTeam.name}' created successfully!`, 'success');
+        navigateToTeam(newTeam.id);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
 }

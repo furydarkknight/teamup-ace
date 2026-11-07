@@ -63,6 +63,14 @@
                     <i class="fa-solid fa-calendar-days text-slate-400"></i> Hackathons
                 </a>
 
+                <a href="#browse-teams" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-users text-slate-400"></i> Browse Teams
+                </a>
+
+                <a href="#browse-students" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-graduate text-slate-400"></i> Browse Students
+                </a>
+
                 <a href="#my-teams" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
                     <i class="fa-solid fa-people-group text-slate-400"></i> My Teams
                 </a>
@@ -514,6 +522,17 @@
 
                 <!-- RIGHT 1 COL: Team Members & Real-time Chat -->
                 <div class="space-y-6">
+                    <!-- Join Requests (Team Lead view) -->
+                    <div id="team-join-requests-card" class="glass-card rounded-2xl p-5 border-indigo-900/50 space-y-3 hidden">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                            <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-user-plus text-amber-400"></i> Join Requests (<span id="team-join-requests-count">0</span>)
+                            </h4>
+                            <span class="text-[10px] text-slate-400">Applicant Review</span>
+                        </div>
+                        <div id="team-join-requests-list" class="space-y-2.5 max-h-56 overflow-y-auto pr-1"></div>
+                    </div>
+
                     <!-- Members Card -->
                     <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
                         <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -546,7 +565,142 @@
             </div>
         </section>
 
-        <!-- 5. MY TEAMS VIEW -->
+        <!-- 5. BROWSE TEAMS VIEW -->
+        <section id="view-browse-teams" class="hidden space-y-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800 mb-2">
+                        <i class="fa-solid fa-users text-indigo-400"></i> Active Hackathon Squads
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Browse Teams</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Discover teams looking for your skills, or find complement-matched open vacancies.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openCreateTeamModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition">
+                        <i class="fa-solid fa-plus"></i> Create New Team
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI Recommended Teams For Current User -->
+            <div id="recommended-teams-section" class="glass-card rounded-2xl p-5 border-indigo-900/40 glow-primary space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">AI Top Recommendations For You</h3>
+                            <p class="text-[11px] text-slate-400">Ranked by skill-complement coverage, role fit & schedule synergy</p>
+                        </div>
+                    </div>
+                    <span class="text-xs text-indigo-400 font-semibold cursor-pointer hover:underline" onclick="loadRecommendedTeams()">Refresh</span>
+                </div>
+                <div id="recommended-teams-carousel" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-xs text-slate-400 py-4 text-center col-span-3">Sign in to view AI-matched teams tailored to your profile.</div>
+                </div>
+            </div>
+
+            <!-- Teams Filters Bar -->
+            <div class="glass-card rounded-2xl p-4 border-slate-800 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                    <input type="text" id="filter-team-search" oninput="debounceTeamSearch()" placeholder="Search teams or skills..." class="px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    <select id="filter-team-college" onchange="applyTeamFilters()" class="px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Colleges</option>
+                    </select>
+                    <select id="filter-team-skill" onchange="applyTeamFilters()" class="px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Required Skills</option>
+                    </select>
+                    <select id="filter-team-role" onchange="applyTeamFilters()" class="px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Preferred Roles</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs text-slate-300">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <select id="filter-team-avail" onchange="applyTeamFilters()" class="px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-white">
+                            <option value="">All Availability</option>
+                            <option value="Full-time">Full-time</option>
+                            <option value="Part-time">Part-time</option>
+                            <option value="Weekends">Weekends</option>
+                        </select>
+                        <select id="filter-team-exp" onchange="applyTeamFilters()" class="px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-white">
+                            <option value="">All Experience</option>
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                        </select>
+                        <label class="flex items-center gap-1.5 cursor-pointer text-xs">
+                            <input type="checkbox" id="filter-team-vacancies" checked onchange="applyTeamFilters()" class="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0">
+                            <span>Open Vacancies Only</span>
+                        </label>
+                    </div>
+                    <button onclick="resetTeamFilters()" class="text-xs text-slate-400 hover:text-white transition">Reset Filters</button>
+                </div>
+            </div>
+
+            <!-- Teams List Grid -->
+            <div id="teams-browse-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+            <!-- Pagination -->
+            <div id="teams-pagination" class="flex items-center justify-center gap-2 pt-4"></div>
+        </section>
+
+        <!-- 6. BROWSE STUDENTS VIEW -->
+        <section id="view-browse-students" class="hidden space-y-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-purple-950 text-purple-300 border border-purple-800 mb-2">
+                        <i class="fa-solid fa-user-graduate text-purple-400"></i> Student Talent Pool
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Browse Students</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Explore 1000+ verified students with detailed skills, 1-5 proficiency ratings, and availability.</p>
+                </div>
+            </div>
+
+            <!-- Students Filters Bar -->
+            <div class="glass-card rounded-2xl p-4 border-slate-800 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                    <input type="text" id="filter-student-search" oninput="debounceStudentSearch()" placeholder="Search by name, skill, interest..." class="px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    <select id="filter-student-college" onchange="applyStudentFilters()" class="px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Colleges</option>
+                    </select>
+                    <select id="filter-student-skill" onchange="applyStudentFilters()" class="px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Skills</option>
+                    </select>
+                    <select id="filter-student-role" onchange="applyStudentFilters()" class="px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Preferred Roles</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs text-slate-300">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <select id="filter-student-avail" onchange="applyStudentFilters()" class="px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-white">
+                            <option value="">All Availability</option>
+                            <option value="Full-time">Full-time</option>
+                            <option value="Part-time">Part-time</option>
+                            <option value="Weekends">Weekends</option>
+                        </select>
+                        <select id="filter-student-exp" onchange="applyStudentFilters()" class="px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-white">
+                            <option value="">All Experience</option>
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                        </select>
+                        <select id="filter-student-gap-team" onchange="applyStudentFilters()" class="px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-amber-300">
+                            <option value="">Fills My Team's Gaps (Select Team)</option>
+                        </select>
+                    </div>
+                    <button onclick="resetStudentFilters()" class="text-xs text-slate-400 hover:text-white transition">Reset Filters</button>
+                </div>
+            </div>
+
+            <!-- Students Grid -->
+            <div id="students-browse-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+            <!-- Pagination -->
+            <div id="students-pagination" class="flex items-center justify-center gap-2 pt-4"></div>
+        </section>
+
+        <!-- 7. MY TEAMS VIEW -->
         <section id="view-my-teams" class="hidden space-y-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -861,113 +1015,199 @@
         </div>
     </div>
 
-    <!-- 7. PROFILE EDIT MODAL -->
-    <div id="profile-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <!-- CREATE TEAM MODAL -->
+    <div id="create-team-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
         <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 border-slate-800 relative space-y-5 max-h-[90vh] overflow-y-auto">
-            <button onclick="closeModal('profile-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+            <button onclick="closeModal('create-team-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
             <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-id-card text-indigo-400"></i> Edit Your Skill Profile
+                <i class="fa-solid fa-users-gear text-indigo-400"></i> Create a Hackathon Team
             </h3>
+            <p class="text-xs text-slate-400 -mt-2">Form your squad, declare skill requirements, and find complement-matched teammates.</p>
 
-            <form onsubmit="handleProfileSave(event)" class="space-y-4">
+            <form onsubmit="handleCreateTeamSubmit(event)" class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs text-slate-300 mb-1">Full Name</label>
-                        <input type="text" id="profile-edit-name" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <label class="block text-xs text-slate-300 mb-1">Team Name *</label>
+                        <input type="text" id="create-team-name" required placeholder="e.g. Neural Pioneers" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-xs text-slate-300 mb-1">College</label>
-                        <input type="text" id="profile-edit-college" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <select id="create-team-college" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            <option value="">Select College</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Team Description</label>
+                    <textarea id="create-team-desc" rows="2" placeholder="Tell potential teammates about your project vision..." class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Open Vacancies</label>
+                        <input type="number" id="create-team-vacancies" min="1" max="7" value="3" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Preferred Experience</label>
+                        <select id="create-team-exp" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate" selected>Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Availability</label>
+                        <select id="create-team-avail" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Full-time">Full-time</option>
+                            <option value="Part-time">Part-time</option>
+                            <option value="Weekends">Weekends</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Required Skills with minimum level -->
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1.5 font-semibold">Required Skills & Minimum Level Needed *</label>
+                    <div id="create-team-skills-picker" class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3 max-h-48 overflow-y-auto">
+                        <div class="text-[11px] text-slate-400">Loading skill choices...</div>
+                    </div>
+                </div>
+
+                <!-- Preferred Roles -->
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1.5 font-semibold">Roles Hiring For</label>
+                    <div id="create-team-roles-picker" class="flex flex-wrap gap-1.5 p-3 bg-slate-900/60 rounded-xl border border-slate-800 max-h-32 overflow-y-auto"></div>
+                </div>
+
+                <!-- Interests -->
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1.5 font-semibold">Target Domains / Interests</label>
+                    <div id="create-team-interests-picker" class="flex flex-wrap gap-1.5 p-3 bg-slate-900/60 rounded-xl border border-slate-800 max-h-32 overflow-y-auto"></div>
+                </div>
+
+                <!-- Collaboration Preference -->
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1.5 font-semibold">Team Collaboration Style</label>
+                    <select id="create-team-collab" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <option value="">Select Working Dynamic</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('create-team-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-300 hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition">Create Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 7. PROFILE EDIT MODAL -->
+    <div id="profile-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-3xl rounded-2xl p-6 border-slate-800 relative space-y-5 max-h-[92vh] overflow-y-auto">
+            <button onclick="closeModal('profile-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div>
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-id-card text-indigo-400"></i> Edit Your Skill Profile
+                </h3>
+                <p class="text-xs text-slate-400 mt-1">Set your skills with 1-5 proficiency ratings, preferred roles & collaboration styles.</p>
+            </div>
+
+            <form onsubmit="handleProfileSave(event)" class="space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Full Name</label>
+                        <input type="text" id="profile-edit-name" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">College</label>
+                        <select id="profile-edit-college" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
                         <label class="block text-xs text-slate-300 mb-1">City</label>
-                        <input type="text" id="profile-edit-city" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <input type="text" id="profile-edit-city" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
                     </div>
                     <div>
                         <label class="block text-xs text-slate-300 mb-1">Year</label>
-                        <input type="text" id="profile-edit-year" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <input type="text" id="profile-edit-year" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
                     </div>
                     <div>
                         <label class="block text-xs text-slate-300 mb-1">Experience Level</label>
-                        <select id="profile-edit-exp" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <select id="profile-edit-exp" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
                             <option value="Beginner">Beginner</option>
                             <option value="Intermediate">Intermediate</option>
                             <option value="Advanced">Advanced</option>
                         </select>
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs text-slate-300 mb-1">Short Bio</label>
-                    <textarea id="profile-edit-bio" rows="2" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-xs text-slate-300 mb-1">Skills & Proficiency (e.g. "Python (Advanced), UI/UX Design (Intermediate)")</label>
-                    <input type="text" id="profile-edit-skills" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
-                </div>
-
-                <div>
-                    <label class="block text-xs text-slate-300 mb-1">Domains / Interests (comma separated)</label>
-                    <input type="text" id="profile-edit-interests" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
-                </div>
-
-                <!-- Availability & Goal -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs text-slate-300 mb-1">Availability</label>
-                        <select id="profile-edit-avail" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <select id="profile-edit-avail" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Full-time">Full-time</option>
+                            <option value="Part-time">Part-time</option>
                             <option value="Weekends">Weekends</option>
-                            <option value="Weekdays">Weekdays</option>
-                            <option value="Evenings">Evenings</option>
-                            <option value="Full-time / Flexible">Full-time / Flexible</option>
                         </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-300 mb-1">Goal</label>
-                        <select id="profile-edit-goal" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
-                            <option value="Win Grand Prize">Win Grand Prize</option>
-                            <option value="Learn & Build Skills">Learn & Build Skills</option>
-                            <option value="Network & Have Fun">Network & Have Fun</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-300 mb-1">Past Hackathons</label>
-                        <input type="number" id="profile-edit-past-hackathons" min="0" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
                     </div>
                 </div>
 
-                <!-- Work Style Preferences -->
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Bio / Pitch</label>
+                    <textarea id="profile-edit-bio" rows="2" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white" placeholder="What are you building or interested in exploring?"></textarea>
+                </div>
+
+                <!-- SKILLS WITH 1-5 PROFICIENCY SLIDERS (GROUPED) -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs text-slate-200 font-bold uppercase tracking-wider">
+                            <i class="fa-solid fa-sliders text-indigo-400 mr-1"></i> Technical Skills & Proficiency (1=Basic to 5=Expert)
+                        </label>
+                        <span class="text-[11px] text-slate-400">Click to toggle, drag slider to set level</span>
+                    </div>
+                    <div id="profile-skills-grouped-container" class="space-y-3 p-3 bg-slate-900/60 rounded-xl border border-slate-800 max-h-64 overflow-y-auto">
+                        <div class="text-xs text-slate-400">Loading skill categories...</div>
+                    </div>
+                </div>
+
+                <!-- PREFERRED ROLES -->
+                <div>
+                    <label class="block text-xs text-slate-200 font-bold uppercase tracking-wider mb-1.5">
+                        <i class="fa-solid fa-briefcase text-purple-400 mr-1"></i> Preferred Roles
+                    </label>
+                    <div id="profile-roles-container" class="flex flex-wrap gap-1.5 p-3 bg-slate-900/60 rounded-xl border border-slate-800 max-h-32 overflow-y-auto"></div>
+                </div>
+
+                <!-- INTERESTS / DOMAINS -->
+                <div>
+                    <label class="block text-xs text-slate-200 font-bold uppercase tracking-wider mb-1.5">
+                        <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> Domains & Interests
+                    </label>
+                    <div id="profile-interests-container" class="flex flex-wrap gap-1.5 p-3 bg-slate-900/60 rounded-xl border border-slate-800 max-h-32 overflow-y-auto"></div>
+                </div>
+
+                <!-- PREFERRED TEAM SIZE & PAST HACKATHONS -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs text-slate-300 mb-1">Schedule</label>
-                        <select id="profile-edit-schedule" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
-                            <option value="Night Owl">Night Owl</option>
-                            <option value="Early Bird">Early Bird</option>
-                            <option value="Flexible">Flexible</option>
-                        </select>
+                        <label class="block text-xs text-slate-300 mb-1">Preferred Team Size (2-8)</label>
+                        <input type="number" id="profile-edit-team-size" min="2" max="8" value="4" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
                     </div>
-                    <div>
-                        <label class="block text-xs text-slate-300 mb-1">Role Preference</label>
-                        <select id="profile-edit-role" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
-                            <option value="Executor / Builder">Executor / Builder</option>
-                            <option value="Leader / Coordinator">Leader / Coordinator</option>
-                            <option value="Strategist / Ideator">Strategist / Ideator</option>
-                        </select>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs text-slate-300 mb-1">Past Hackathons</label>
+                        <input type="number" id="profile-edit-past-hackathons" min="0" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
                     </div>
-                    <div>
-                        <label class="block text-xs text-slate-300 mb-1">Sprint Vibe</label>
-                        <select id="profile-edit-vibe" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
-                            <option value="Competitive / Serious">Competitive / Serious</option>
-                            <option value="Balanced">Balanced</option>
-                            <option value="Casual / Experimental">Casual / Experimental</option>
-                        </select>
-                    </div>
+                </div>
+
+                <!-- 10 SELECTABLE COLLABORATION PREFERENCE CARDS -->
+                <div>
+                    <label class="block text-xs text-slate-200 font-bold uppercase tracking-wider mb-1.5">
+                        <i class="fa-solid fa-handshake text-emerald-400 mr-1"></i> Collaboration Style (Select Your Preference)
+                    </label>
+                    <div id="profile-collab-cards-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1"></div>
                 </div>
 
                 <!-- Mentor Modes -->

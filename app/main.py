@@ -7,7 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import APP_NAME, APP_TAGLINE, MATCHER_TYPE, BASE_DIR
 from app.database import engine, Base
+from app.migrations import run_migrations
 from app.routes import auth, profile, events, seats, invites, teams, feedback, safety, icebreaker
+from app.routes import meta, students, join_requests
+
+# Run safe migrations
+run_migrations()
 
 # Ensure tables are created
 Base.metadata.create_all(bind=engine)
@@ -15,7 +20,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title=APP_NAME,
     description="AI-powered Team Finder & Collaboration platform for AllCollegeEvent.com (ACE). Prototype for ACE TeamUp Challenge (International Hackathon 5.0).",
-    version="1.0.0",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -43,9 +48,13 @@ app.include_router(events.router)
 app.include_router(seats.router)
 app.include_router(invites.router)
 app.include_router(teams.router)
+app.include_router(teams.recommended_router)
 app.include_router(feedback.router)
 app.include_router(safety.router)
 app.include_router(icebreaker.router)
+app.include_router(meta.router)
+app.include_router(students.router)
+app.include_router(join_requests.router)
 
 @app.get("/api/config")
 def get_app_config():
@@ -54,7 +63,7 @@ def get_app_config():
         "app_name": APP_NAME,
         "tagline": APP_TAGLINE,
         "matcher": MATCHER_TYPE,
-        "ml_model_exists": (BASE_DIR / "models" / "matcher.pkl").exists()
+        "ml_model_exists": (BASE_DIR / "models" / "modules.json").exists() or (BASE_DIR / "models" / "ace_teamup_model_v2").exists()
     }
 
 @app.get("/", response_class=HTMLResponse)

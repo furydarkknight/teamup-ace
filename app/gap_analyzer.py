@@ -3,137 +3,126 @@ from sqlalchemy.orm import Session
 from app.models import Team, Event, User, TeamMember
 from matching import get_matcher
 
-def generate_ai_team_pitch(team_name: str, event_theme: str, covered_roles: List[str], members_count: int) -> str:
-    """
-    Template-based AI hook generator tailored to the team's skillset and event theme.
-    """
-    roles_str = " & ".join(covered_roles[:2]) if covered_roles else "Full-Stack Innovation"
-    
+def generate_ai_team_pitch(team_name: str, theme: str, covered_skills: List[str], members_count: int) -> str:
+    roles_str = " & ".join(covered_skills[:2]) if covered_skills else "Full-Stack Innovation"
     pitches = [
-        f"A high-velocity {roles_str} squad primed to engineer breakthrough solutions for {event_theme}.",
-        f"Fusing deep expertise in {roles_str} with relentless execution to take top podium at the hackathon.",
-        f"Cross-functional builders uniting {roles_str} to transform ideas into a production-grade {event_theme} MVP.",
-        f"Agile builders combining strategic domain knowledge with technical execution in {roles_str}."
+        f"A high-velocity {roles_str} squad primed to engineer breakthrough solutions for {theme}.",
+        f"Fusing deep expertise in {roles_str} with relentless execution to take top podium.",
+        f"Cross-functional builders uniting {roles_str} to deliver a production-grade MVP.",
+        f"Agile builders combining strategic domain knowledge with technical execution in {roles_str}.",
     ]
-    # Deterministic choice based on team name hash
     idx = sum(ord(c) for c in team_name) % len(pitches)
     return pitches[idx]
 
-def generate_suggested_role_split(team: Team, event: Event) -> Dict[str, str]:
-    """
-    Suggests an optimal division of labor across current team members based on their declared skills.
-    """
+def generate_suggested_role_split(team: Team) -> Dict[str, str]:
     role_split = {}
-    event_roles = list(event.required_roles) if event else []
-
+    preferred_roles = team.preferred_roles or []
     assigned_roles = set()
-
-    for idx, member in enumerate(team.members):
+    for idx, member in enumerate(team.members or []):
         user = member.user
-        member_skills = [s.get("name", "") for s in user.skills]
-        
-        # Match member skills to event roles
+        if not user:
+            continue
+        member_skills = user.skills or []
         best_role = None
-        for er in event_roles:
-            if er not in assigned_roles:
+        for pr in preferred_roles:
+            if pr not in assigned_roles:
                 for ms in member_skills:
-                    if ms.lower() in er.lower() or er.lower() in ms.lower():
-                        best_role = er
+                    if ms.lower() in pr.lower() or pr.lower() in ms.lower():
+                        best_role = pr
                         break
             if best_role:
                 break
-        
         if not best_role:
-            best_role = member.role or (f"Technical Lead & Architecture" if idx == 0 else f"Core Builder ({', '.join(member_skills[:1])})")
-
+            if idx == 0:
+                best_role = "Technical Lead & Architecture"
+            else:
+                best_role = f"Core Builder ({', '.join(member_skills[:1])})" if member_skills else "Team Member"
         assigned_roles.add(best_role)
         role_split[user.name] = best_role
-
     return role_split
 
-def analyze_team_gaps(team: Team, event: Event, db: Session) -> Dict[str, Any]:
+def analyze_team_gaps(team: Team, event, db: Session) -> Dict[str, Any]:
     """
-    Compares team skills against event's required roles,
-    flags missing skills, and suggests top candidates for each missing role.
+    Compares team's current_skills vs required_skills/skill_requirements.
+    Returns skill_comparison list for bar chart + suggested candidates.
     """
-    required_roles = list(event.required_roles) if event else []
-    
-    # Collect all skills in current team
-    team_skills_names = set()
-    team_user_ids = {m.user_id for m in team.members}
+    required_list = team.required_skills or []
+    skill_reqs = team.skill_requirements or {}  # {skill: min_level}
+    current_skills = team.current_skills or {}  # {skill: current_level}
 
-    for member in team.members:
-        for s in member.user.skills:
-            team_skills_names.add(s.get("name", "").strip().lower())
+    all_required = set(required_list)
+    for s in skill_reqs:
+        all_required.add(s)
 
-    covered_roles = []
-    missing_roles = []
+    skill_comparison = []
+    missing_skills = []
+    covered_skills = []
 
-    for role in required_roles:
-        r_lower = role.lower()
-        if any(ts in r_lower or r_lower in ts for ts in team_skills_names):
-            covered_roles.append(role)
+    for skill in sorted(all_required):
+        required_level = skill_reqs.get(skill, 1)
+        current_level = current_skills.get(skill, 0)
+        gap = max(0, required_level - current_level)
+        is_covered = current_level >= required_level
+        skill_comparison.append({
+            "skill": skill,
+            "required_level": required_level,
+            "current_level": current_level,
+            "gap": gap,
+            "covered": is_covered
+        })
+        if is_covered:
+            covered_skills.append(skill)
         else:
-            missing_roles.append(role)
+            missing_skills.append(skill)
 
-    # Suggest candidates for missing roles
     suggested_candidates = []
-    if missing_roles:
-        all_candidates = db.query(User).filter(~User.id.in_(team_user_ids)).limit(30).all()
+    team_member_ids = {m.user_id for m in (team.members or [])}
+
+    if missing_skills:
+        all_candidates = db.query(User).filter(
+            ~User.id.in_(team_member_ids)
+        ).limit(50).all()
+
         matcher = get_matcher()
-        matched = matcher.match(team.leader, event, all_candidates)
+        matched = matcher.match_team_to_students(team, all_candidates)
 
-        # For each missing role, find top matching candidate who has this role
-        seen_cand_ids = set()
-        for missing_role in missing_roles:
-            m_lower = missing_role.lower()
-            role_cand_found = False
+        seen = set()
+        student_lookup = {s.id: s for s in all_candidates}
 
+        for missing_skill in missing_skills[:5]:
             for match_res in matched:
-                cand_id = match_res.user_id
-                if cand_id in seen_cand_ids:
+                if match_res.user_id in seen:
                     continue
-                cand_user = next((c for c in all_candidates if c.id == cand_id), None)
-                if not cand_user:
+                cand = student_lookup.get(match_res.user_id)
+                if not cand:
                     continue
-
-                has_skill = any(m_lower in s.get("name", "").lower() or s.get("name", "").lower() in m_lower for s in cand_user.skills)
+                has_skill = missing_skill.lower() in [str(s).lower() for s in (cand.skills or [])]
                 if has_skill:
                     suggested_candidates.append({
-                        "role": missing_role,
-                        "user": cand_user,
+                        "role": missing_skill,
+                        "user": cand,
                         "score": match_res.score,
-                        "reason": f"Covers missing role '{missing_role}' with high proficiency."
+                        "reason": f"Covers missing '{missing_skill}' - {match_res.score}% team match."
                     })
-                    seen_cand_ids.add(cand_id)
-                    role_cand_found = True
+                    seen.add(match_res.user_id)
                     break
 
-            # Fallback if no specific role holder among top, take top match
-            if not role_cand_found and matched:
-                for match_res in matched:
-                    if match_res.user_id not in seen_cand_ids:
-                        cand_user = next((c for c in all_candidates if c.id == match_res.user_id), None)
-                        if cand_user:
-                            suggested_candidates.append({
-                                "role": missing_role,
-                                "user": cand_user,
-                                "score": match_res.score,
-                                "reason": f"Top compatible candidate ({match_res.score}% match) to bridge '{missing_role}'."
-                            })
-                            seen_cand_ids.add(cand_user.id)
-                            break
-
-    role_split = generate_suggested_role_split(team, event)
-    team_pitch = generate_ai_team_pitch(team.name, event.theme, covered_roles, len(team.members))
+    theme = event.theme if event else "Hackathon Innovation"
+    role_split = generate_suggested_role_split(team)
+    pitch = generate_ai_team_pitch(
+        team.team_name or team.name, theme, covered_skills, len(team.members or [])
+    )
 
     return {
         "team_id": team.id,
-        "event_id": event.id,
-        "required_roles": required_roles,
-        "covered_roles": covered_roles,
-        "missing_roles": missing_roles,
+        "event_id": event.id if event else None,
+        "required_skills": list(all_required),
+        "skill_requirements": skill_reqs,
+        "current_skills": current_skills,
+        "missing_skills": missing_skills,
+        "covered_skills": covered_skills,
+        "skill_comparison": skill_comparison,
         "suggested_role_split": role_split,
-        "ai_generated_pitch": team.pitch or team_pitch,
-        "suggested_candidates": suggested_candidates
+        "ai_generated_pitch": team.pitch or pitch,
+        "suggested_candidates": suggested_candidates,
     }

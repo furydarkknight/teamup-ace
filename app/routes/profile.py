@@ -26,8 +26,17 @@ def update_my_profile(
     if "skills" in update_data and update_data["skills"] is not None:
         current_user.skills = update_data.pop("skills")
     
+    if "skill_proficiency" in update_data and update_data["skill_proficiency"] is not None:
+        current_user.skill_proficiency = update_data.pop("skill_proficiency")
+
     if "interests" in update_data and update_data["interests"] is not None:
         current_user.interests = update_data.pop("interests")
+
+    if "project_experience" in update_data and update_data["project_experience"] is not None:
+        current_user.project_experience = update_data.pop("project_experience")
+
+    if "preferred_roles" in update_data and update_data["preferred_roles"] is not None:
+        current_user.preferred_roles = update_data.pop("preferred_roles")
 
     for field, val in update_data.items():
         if hasattr(current_user, field) and val is not None:

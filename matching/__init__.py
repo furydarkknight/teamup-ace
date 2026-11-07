@@ -5,9 +5,9 @@ from matching.ml_matcher import MLMatcher
 
 def get_matcher() -> BaseMatcher:
     """
-    Returns matcher instance based on config MATCHER:
-    - 'rule_based': weighted scoring algorithm
-    - 'ml': loads models/matcher.pkl with rule-based fallback
+    Returns matcher instance based on MATCHER env var:
+    - 'rule_based': weighted scoring algorithm (default)
+    - 'ml': sentence-transformers model with rule-based fallback
     """
     if MATCHER_TYPE == "ml":
         return MLMatcher()

@@ -16,10 +16,11 @@ Students struggle to find teammates with complementary skills for hackathons. Ex
 
 ## 🛠️ Tech Stack
 - **Backend**: Python 3.12 with **FastAPI** (REST JSON APIs, Pydantic schemas)
-- **Database**: SQLite with **SQLAlchemy ORM**
-- **Frontend**: HTML5, **Tailwind CSS** (CDN), FontAwesome 6, and clean Vanilla JavaScript (no heavy node frameworks)
+- **Database**: SQLite with **SQLAlchemy ORM** (safe migrations with `app/migrations.py`)
+- **Frontend**: HTML5, **Tailwind CSS** (CDN), FontAwesome 6, and responsive Vanilla JavaScript
 - **Matching Engine**: Modular, swappable architecture (`matching/base.py`, `matching/rule_based.py`, `matching/ml_matcher.py`)
-- **Machine Learning Support**: Feature vector extraction, training dataset export (`training/export_dataset.py`), and model runner
+- **Machine Learning Support**: 229-dimensional feature schema (`models/feature_schema.json`), Sentence-Transformers embedding support (`models/ace_teamup_model_v2`), and dataset exporter (`training/export_dataset.py`)
+- **Real Dataset Ready**: Seeded and imported with 1,000 real students and 300 hackathon teams (`import_data.py`)
 
 ---
 
@@ -30,14 +31,16 @@ Students struggle to find teammates with complementary skills for hackathons. Ex
 pip install -r requirements.txt
 ```
 
-### 2. Seed Database & Run Server
+### 2. Import Real Datasets & Run Server
 ```bash
-python seed.py && python run.py
+python import_data.py --students students.csv --teams teams.csv
+python run.py
 ```
 Open your browser at **`http://localhost:8000`**!
 
 - **Swagger API Docs**: `http://localhost:8000/docs`
 - **ReDoc Interactive Docs**: `http://localhost:8000/redoc`
+- **Meta Categories API**: `http://localhost:8000/api/meta/categories`
 
 ---
 
@@ -81,58 +84,61 @@ An instant demo account is provided with 50 seeded students across 10 colleges:
 
 ## 🧠 Modular Matching Engine Architecture
 
-The matching layer is swappable and decoupled in `matching/`:
+The matching layer is modular, bidirectional, and swappable in `matching/`:
 
 ```
 matching/
 ├── __init__.py       # Factory pattern: get_matcher()
 ├── base.py           # Abstract BaseMatcher class & MatchResult dataclass
+├── weights.py        # Configurable scoring weights
+├── features.py       # 229-dimensional feature vector builder
 ├── rule_based.py     # Default complement-based weighted algorithm
-└── ml_matcher.py     # ML model loader with fallback & feature vector extractor
+└── ml_matcher.py     # Sentence-Transformers & sklearn model loader with fallback
 ```
 
-### 1. Weighted Scoring Algorithm (`matching/rule_based.py`)
-- **Complementary Skills (40%)**: Rewards candidates who cover the specific roles the user lacks relative to the event's required roles.
-- **Availability Overlap (20%)**: Compatible sprint schedules (Weekends, Evenings, Flexible).
-- **Experience & Mentor Synergy (15%)**: Balanced senior-intermediate execution or beginner-mentor pairing.
-- **Goal Alignment (15%)**: "Win Grand Prize" vs "Learn & Build Skills".
-- **Work-Style Compatibility (10%)**: Leader-to-executor synergy, sprint pacing, and team culture vibe.
+### 1. Dual-Direction Matching
+- **Student → Teams (`/api/me/recommended-teams`)**: Recommends open teams to a student, ranking by how well the student bridges the team's missing skill requirements and matches their working style.
+- **Team → Students (`/api/teams/{id}/recommended-students`)**: Recommends students to team leads who cover flagged skill gaps.
+- **Event Candidate Feed (`/api/events/{id}/matches`)**: Legacy event-based candidate discovery.
 
-### 2. Switching Between Matchers (`.env`)
+### 2. Weighted Scoring Configuration (`matching/weights.py`)
+- **Skill-Gap Coverage (35%)**: Compares student proficiency against team's minimum required levels (`skill_requirements`).
+- **Interest Overlap (15%)**: Jaccard similarity across 31 domain interests.
+- **Role Fit (15%)**: Matches student's preferred roles with roles the team is actively hiring for.
+- **Experience Fit (10%)**: Exact match (1.0), adjacent level (0.5), or different (0.1).
+- **Availability Match (10%)**: Full-time, Part-time, Weekends compatibility.
+- **Collaboration Style (10%)**: Matches among 10 distinct working preferences from the dataset.
+- **Team Size Fit (5%)**: Evaluates preferred team size (2-8) vs team total capacity.
+
+### 3. Switching Between Matchers (`.env`)
 In your `.env` file:
 ```env
-# Use rule-based complement matcher:
+# Use rule-based complement matcher (default):
 MATCHER=rule_based
 
-# Or switch to trained Machine Learning model:
+# Or switch to ML model:
 MATCHER=ml
 ```
 
-### 3. How to Plug in Your Trained ML Model
-1. **Export the Dataset**:
-   ```bash
-   python training/export_dataset.py
-   ```
-   Generates `training/teamup_match_dataset.csv` with 87 numerical feature columns and a target label `label_successful_team`.
+### 4. 229-Feature Machine Learning Schema (`models/feature_schema.json`)
+The feature builder in `matching/features.py` produces the exact 229 numerical features defined in `models/feature_schema.json`:
+- 31 student skill proficiency levels (0-5)
+- 31 team skill requirement minimum levels (0-5)
+- 31 skill gap indicators `max(0, required - current)`
+- 31 student multi-hot interest indicators
+- 31 team multi-hot interest indicators
+- 21 student preferred role multi-hot indicators
+- 21 team preferred role multi-hot indicators
+- 2 experience ordinals
+- 6 availability one-hot indicators
+- 20 collaboration preference one-hot indicators
+- 4 team size scalars
 
-2. **Feature Vector Format**:
-   The `MLMatcher.extract_feature_vector(user, candidate, event)` produces:
-   - `user_skills` (binary vector of length `len(PREDEFINED_SKILLS)`)
-   - `cand_skills` (binary vector of length `len(PREDEFINED_SKILLS)`)
-   - `event_roles` (binary vector of length `len(PREDEFINED_SKILLS)`)
-   - `complement_skills = cand_skills * max(0, event_roles - user_skills)`
-   - `availability_overlap` (float: 0.3 to 1.0)
-   - `user_experience` & `cand_experience` (0=Beginner, 1=Intermediate, 2=Advanced)
-   - `goal_alignment` (float: 0.4 to 1.0)
-   - `workstyle_schedule_match` & `workstyle_role_synergy` (floats: 0.5 to 1.0)
-   - `cand_reliability_score` (float: 0.0 to 1.0)
-
-3. **Train and Save Model**:
-   Save your trained model artifact to `models/matcher.pkl`:
-   ```bash
-   python training/train_dummy_model.py
-   ```
-   If `models/matcher.pkl` exists and `MATCHER=ml`, `MLMatcher` automatically loads and scores candidates with neural / forest predictions!
+Export pairs and train an ML model:
+```bash
+python training/export_dataset.py
+python training/train_dummy_model.py
+```
 
 ---
 
