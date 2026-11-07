@@ -42,6 +42,28 @@ def update_my_profile(
         if hasattr(current_user, field) and val is not None:
             setattr(current_user, field, val)
 
+    # Sync to linked StudentProfile
+    from app.models import StudentProfile
+    if not current_user.student_profile:
+        current_user.student_profile = StudentProfile(user_id=current_user.id)
+        db.add(current_user.student_profile)
+
+    sp = current_user.student_profile
+    sp.student_id = current_user.student_id
+    sp.college = current_user.college
+    sp.city = current_user.city
+    sp.year = current_user.year
+    sp.bio = current_user.bio or current_user.short_bio or ""
+    sp.skills_json = current_user.skills_json
+    sp.skill_proficiency_json = current_user.skill_proficiency_json
+    sp.interests_json = current_user.interests_json
+    sp.preferred_roles_json = current_user.preferred_roles_json
+    sp.experience_level = current_user.experience_level
+    sp.availability = current_user.availability
+    sp.preferred_team_size = current_user.preferred_team_size
+    sp.collaboration_preference = current_user.collaboration_preference
+    sp.project_experience_json = current_user.project_experience_json
+
     db.commit()
     db.refresh(current_user)
     return current_user

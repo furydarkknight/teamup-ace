@@ -22,9 +22,19 @@ if os.getenv("VERCEL"):
             print("[Vercel] Successfully copied teamup.db to /tmp/teamup.db")
         except Exception as e:
             print(f"[Vercel] Warning copying teamup.db to /tmp: {e}")
-    DATABASE_URL = f"sqlite:///{tmp_db}"
+    DATABASE_URL = f"sqlite:///{tmp_db.as_posix()}"
 else:
-    DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'teamup.db'}")
+    raw_db_url = os.getenv("DATABASE_URL", "")
+    if raw_db_url.startswith("postgres://"):
+        DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
+    elif raw_db_url.startswith("postgresql://"):
+        DATABASE_URL = raw_db_url
+    elif raw_db_url and not raw_db_url.startswith("sqlite:///."):
+        DATABASE_URL = raw_db_url
+    else:
+        # Guarantee absolute path for SQLite to prevent split DBs across directories
+        abs_db_path = (BASE_DIR / "teamup.db").resolve().as_posix()
+        DATABASE_URL = f"sqlite:///{abs_db_path}"
 
 MATCHER_TYPE = os.getenv("MATCHER", "rule_based").lower()  # "rule_based" or "ml"
 

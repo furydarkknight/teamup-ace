@@ -71,6 +71,7 @@ class User(Base):
     received_invites = relationship("Invite", back_populates="receiver", foreign_keys="Invite.receiver_id")
     sent_messages = relationship("TeamMessage", back_populates="sender")
     join_requests = relationship("TeamJoinRequest", back_populates="user")
+    student_profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     @property
     def skills(self):
@@ -450,6 +451,57 @@ class Report(Base):
     reason = Column(String(100), nullable=False)
     details = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StudentProfile(Base):
+    __tablename__ = "student_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True, nullable=False)
+    student_id = Column(String(50), unique=True, index=True, nullable=True)
+    college = Column(String(150), default="", index=True)
+    city = Column(String(100), default="Delhi")
+    year = Column(String(50), default="3rd Year")
+    bio = Column(Text, default="")
+    skills_json = Column(Text, default="[]")
+    skill_proficiency_json = Column(Text, default="{}")
+    interests_json = Column(Text, default="[]")
+    preferred_roles_json = Column(Text, default="[]")
+    experience_level = Column(String(50), default="Intermediate", index=True)
+    availability = Column(String(50), default="Full-time", index=True)
+    preferred_team_size = Column(Integer, default=4)
+    collaboration_preference = Column(String(255), default="")
+    project_experience_json = Column(Text, default="[]")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="student_profile")
+
+
+import re
+from sqlalchemy.orm import Session
+
+def generate_next_student_id(db: Session) -> str:
+    """Safely generate next sequential student display code (S1001+) without collision."""
+    result = db.query(User.student_id).filter(User.student_id.like("S%")).all()
+    max_num = 1000
+    for (s_id,) in result:
+        if s_id:
+            m = re.match(r"^S0*(\d+)$", s_id)
+            if m:
+                max_num = max(max_num, int(m.group(1)))
+    return f"S{max_num + 1}"
+
+def generate_next_team_id(db: Session) -> str:
+    """Safely generate next sequential team display code (T301+) without collision."""
+    result = db.query(Team.team_id).filter(Team.team_id.like("T%")).all()
+    max_num = 300
+    for (t_id,) in result:
+        if t_id:
+            m = re.match(r"^T0*(\d+)$", t_id)
+            if m:
+                max_num = max(max_num, int(m.group(1)))
+    return f"T{max_num + 1:03d}"
 
 
 # Import and expose all platform expansion models

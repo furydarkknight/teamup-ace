@@ -209,10 +209,120 @@ async function loginDemoUser() {
     }
 }
 
+function toggleAuthTab(tab) {
+    const loginForm = document.getElementById('form-login');
+    const signupForm = document.getElementById('form-signup');
+    const forgotForm = document.getElementById('form-forgot');
+    const tabLogin = document.getElementById('auth-tab-login');
+    const tabSignup = document.getElementById('auth-tab-signup');
+    const tabForgot = document.getElementById('auth-tab-forgot');
+    const title = document.getElementById('auth-modal-title');
+    const subtitle = document.getElementById('auth-modal-subtitle');
+    hideAuthAlert();
+
+    [tabLogin, tabSignup, tabForgot].forEach(btn => {
+        if (btn) btn.className = 'flex-1 py-2 text-slate-400 border-b-2 border-transparent hover:text-white transition';
+    });
+
+    if (tab === 'login') {
+        loginForm?.classList.remove('hidden');
+        signupForm?.classList.add('hidden');
+        forgotForm?.classList.add('hidden');
+        if (tabLogin) tabLogin.className = 'flex-1 py-2 text-indigo-400 border-b-2 border-indigo-500 font-bold transition';
+        if (title) title.textContent = 'Sign In to TeamUp';
+        if (subtitle) subtitle.textContent = 'Connect with complement-matched hackathon teammates & opportunities';
+    } else if (tab === 'signup') {
+        loginForm?.classList.add('hidden');
+        signupForm?.classList.remove('hidden');
+        forgotForm?.classList.add('hidden');
+        if (tabSignup) tabSignup.className = 'flex-1 py-2 text-indigo-400 border-b-2 border-indigo-500 font-bold transition';
+        if (title) title.textContent = 'Create TeamUp Account';
+        if (subtitle) subtitle.textContent = 'Join 1,000+ builders, find teams, and discover hackathons & jobs';
+    } else if (tab === 'forgot') {
+        loginForm?.classList.add('hidden');
+        signupForm?.classList.add('hidden');
+        forgotForm?.classList.remove('hidden');
+        if (tabForgot) tabForgot.className = 'flex-1 py-2 text-indigo-400 border-b-2 border-indigo-500 font-bold transition';
+        if (title) title.textContent = 'Reset Password';
+        if (subtitle) subtitle.textContent = 'Generate a secure one-time reset token';
+    }
+}
+
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPw = input.type === 'password';
+    input.type = isPw ? 'text' : 'password';
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = isPw ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    }
+}
+
+function showAuthAlert(message, type = 'error') {
+    const box = document.getElementById('auth-alert-box');
+    if (!box) return;
+    box.className = `text-xs p-3 rounded-xl border ${type === 'error' ? 'bg-rose-950/50 border-rose-800 text-rose-300' : 'bg-emerald-950/50 border-emerald-800 text-emerald-300'}`;
+    box.innerHTML = message;
+}
+
+function hideAuthAlert() {
+    const box = document.getElementById('auth-alert-box');
+    if (box) box.classList.add('hidden');
+}
+
+async function handleForgotPassword(e) {
+    e.preventDefault();
+    hideAuthAlert();
+    const email = document.getElementById('forgot-email')?.value.trim();
+    const btn = document.getElementById('btn-forgot-submit');
+    const resultBox = document.getElementById('forgot-token-result');
+    if (!email) return;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Generating...';
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Could not generate reset token');
+
+        if (resultBox) {
+            resultBox.classList.remove('hidden');
+            resultBox.innerHTML = `
+                <div class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> One-Time Reset Token Generated:</div>
+                <div class="font-mono bg-slate-900 p-2 rounded border border-slate-800 select-all text-amber-300 text-[11px]">${data.mock_token || 'reset_token'}</div>
+                <p class="text-[10px] text-slate-400">In production this is emailed. Use this token in the API or logs to complete password reset.</p>
+            `;
+        }
+        showToast('Password reset token generated!', 'success');
+    } catch (err) {
+        showAuthAlert(`<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${err.message}`, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>Generate Reset Token</span>';
+        }
+    }
+}
+
 async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('login-email').value;
+    hideAuthAlert();
+    const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
+    const btn = document.getElementById('btn-login-submit');
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Signing In...';
+    }
 
     try {
         const res = await fetch(`${API_BASE}/auth/login`, {
@@ -221,47 +331,85 @@ async function handleLogin(e) {
             body: JSON.stringify({ email, password })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Login failed');
+        if (!res.ok) {
+            const errDetail = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join(', ') : (data.detail || 'Invalid email or password');
+            throw new Error(errDetail);
+        }
 
-        state.token = data.access_token;
+        state.token = data.access_token || data.token;
         state.user = data.user;
         localStorage.setItem('teamup_token', state.token);
         closeModal('auth-modal');
         updateNavAuthUI();
-        showToast(`Welcome, ${state.user.name}!`, 'success');
+        showToast(`Welcome back, ${state.user.name}!`, 'success');
         handleHashRouting();
     } catch (err) {
-        showToast(err.message, 'error');
+        showAuthAlert(`<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${err.message}`, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>Sign In</span>';
+        }
     }
 }
 
 async function handleSignup(e) {
     e.preventDefault();
-    const name = document.getElementById('signup-name').value;
-    const email = document.getElementById('signup-email').value;
+    hideAuthAlert();
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
-    const college = document.getElementById('signup-college').value;
-    const city = document.getElementById('signup-city').value;
-    const year = document.getElementById('signup-year').value;
+    const confirmPassword = document.getElementById('signup-password-confirm')?.value;
+    const college = document.getElementById('signup-college').value.trim();
+    const city = document.getElementById('signup-city')?.value.trim() || 'Delhi';
+    const year = document.getElementById('signup-year')?.value || '3rd Year';
+    const experience_level = document.getElementById('signup-exp')?.value || 'Intermediate';
+    const btn = document.getElementById('btn-signup-submit');
+
+    if (confirmPassword && password !== confirmPassword) {
+        showAuthAlert('<i class="fa-solid fa-triangle-exclamation mr-1"></i> Passwords do not match. Please verify.', 'error');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Creating Account...';
+    }
 
     try {
         const res = await fetch(`${API_BASE}/auth/signup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password, college, city, year })
+            body: JSON.stringify({
+                name,
+                email,
+                password,
+                college,
+                city,
+                year,
+                experience_level
+            })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Signup failed');
+        if (!res.ok) {
+            const errDetail = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join(', ') : (data.detail || 'Signup failed');
+            throw new Error(errDetail);
+        }
 
-        state.token = data.access_token;
+        state.token = data.access_token || data.token;
         state.user = data.user;
         localStorage.setItem('teamup_token', state.token);
         closeModal('auth-modal');
         updateNavAuthUI();
-        showToast(`Account created! ${state.user.is_verified ? 'Verified student badge unlocked!' : ''}`, 'success');
-        openProfileModal(); // prompt profile customization
+        showToast(`Account created! Welcome, ${state.user.name}. ${state.user.is_verified ? 'Verified student badge unlocked!' : ''}`, 'success');
+        openProfileModal(); // prompt profile customization with categories
     } catch (err) {
-        showToast(err.message, 'error');
+        showAuthAlert(`<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${err.message}`, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>Create Account & Setup Profile</span>';
+        }
     }
 }
 
@@ -1889,7 +2037,7 @@ async function loadRecommendedTeams() {
     }
 
     try {
-        const res = await fetch(`${API_BASE}/me/recommended-teams?per_page=3`, {
+        const res = await fetch(`${API_BASE}/me/recommended-teams?per_page=6`, {
             headers: { 'Authorization': `Bearer ${state.token}` }
         });
         if (!res.ok) return;
@@ -1901,17 +2049,34 @@ async function loadRecommendedTeams() {
     }
 }
 
+function toggleRecBreakdown(id) {
+    const el = document.getElementById(`rec-breakdown-${id}`);
+    if (el) el.classList.toggle('hidden');
+}
+
+function toggleTeamBreakdown(id) {
+    const el = document.getElementById(`team-breakdown-${id}`);
+    if (el) el.classList.toggle('hidden');
+}
+
+function toggleStudentBreakdown(id) {
+    const el = document.getElementById(`student-breakdown-${id}`);
+    if (el) el.classList.toggle('hidden');
+}
+
 function renderRecommendedTeamsList(items) {
     const container = document.getElementById('recommended-teams-carousel');
     if (!container) return;
     if (items.length === 0) {
-        container.innerHTML = `<div class="text-xs text-slate-400 py-3 text-center col-span-3">No recommended teams found for your current skills.</div>`;
+        container.innerHTML = `<div class="text-xs text-slate-400 py-3 text-center col-span-3">No recommended teams found for your current skills. Try adding more skills in your profile!</div>`;
         return;
     }
 
     container.innerHTML = items.map(match => {
         const t = match.team;
         const scoreColor = match.score >= 80 ? 'from-emerald-600 to-teal-600' : (match.score >= 60 ? 'from-indigo-600 to-purple-600' : 'from-amber-600 to-orange-600');
+        const engineTag = match.engine && match.engine.toLowerCase().includes('ml') ? '🤖 ML Match' : '⚡ Rule-based';
+        
         const reasonsHtml = (match.reasons || []).slice(0, 2).map(r => `
             <p class="text-[11px] text-indigo-300 leading-snug"><i class="fa-solid fa-sparkles text-amber-400 mr-1"></i>${r}</p>
         `).join('');
@@ -1920,13 +2085,32 @@ function renderRecommendedTeamsList(items) {
             <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">${s}</span>
         `).join('');
 
+        const bd = match.breakdown || {};
+        const breakdownHtml = `
+            <div id="rec-breakdown-${t.id}" class="hidden space-y-1 bg-slate-950/90 p-2.5 rounded-lg border border-indigo-800/60 text-[10px] text-slate-300">
+                <div class="font-bold text-indigo-400 mb-1 flex items-center justify-between">
+                    <span>Scoring Provenance:</span>
+                    <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[9px]">${engineTag}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1 text-[10px]">
+                    <div>Skills Match: <strong class="text-white">${bd.skills_pct || 0}%</strong></div>
+                    <div>Interests: <strong class="text-white">${bd.interests_pct || 0}%</strong></div>
+                    <div>Roles Fit: <strong class="text-white">${bd.roles_pct || 0}%</strong></div>
+                    <div>Availability: <strong class="text-white">${bd.availability_pct || 0}%</strong></div>
+                </div>
+            </div>
+        `;
+
         return `
             <div class="glass-card rounded-xl p-4 border border-indigo-800/60 flex flex-col justify-between space-y-3 relative overflow-hidden">
                 <div class="space-y-2">
                     <div class="flex items-center justify-between gap-1.5">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r ${scoreColor} text-white shadow-sm">
-                            ${match.score}% Match
-                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r ${scoreColor} text-white shadow-sm">
+                                ${match.score}% Match
+                            </span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700 font-mono">${engineTag}</span>
+                        </div>
                         <span class="text-[10px] text-emerald-400 font-semibold">${t.vacancies} open</span>
                     </div>
                     <div>
@@ -1936,7 +2120,12 @@ function renderRecommendedTeamsList(items) {
 
                     <div class="space-y-1 bg-slate-900/70 p-2 rounded-lg border border-slate-800">
                         ${reasonsHtml}
+                        <button onclick="toggleRecBreakdown(${t.id})" class="text-[10px] text-indigo-400 hover:text-indigo-300 underline block pt-0.5">
+                            Why this match? (Breakdown)
+                        </button>
                     </div>
+
+                    ${breakdownHtml}
 
                     <div class="space-y-1">
                         <p class="text-[10px] font-semibold text-slate-400 uppercase">Needs Skills:</p>
@@ -1975,15 +2164,19 @@ async function loadBrowseTeams(page = 1) {
         per_page: 18,
         vacancies_gt_0: vacanciesOnly
     });
-    if (search) params.append('skill', search);
+    if (search) params.append('search', search);
     if (college) params.append('college', college);
     if (skill) params.append('skill', skill);
     if (role) params.append('role', role);
     if (avail) params.append('availability', avail);
     if (exp) params.append('experience', exp);
+    const sortBy = document.getElementById('filter-team-sort')?.value || 'best_match';
+    if (sortBy) params.append('sort_by', sortBy);
+
+    const headers = state.token ? { 'Authorization': `Bearer ${state.token}` } : {};
 
     try {
-        const res = await fetch(`${API_BASE}/teams/browse?${params.toString()}`);
+        const res = await fetch(`${API_BASE}/teams/browse?${params.toString()}`, { headers });
         if (!res.ok) throw new Error('Failed to load teams');
         const data = await res.json();
         state.browseTeams = data;
@@ -2014,6 +2207,31 @@ function renderBrowseTeamsList(data) {
 
         const totalSlots = (team.current_team_size || 1) + (team.vacancies || 0);
 
+        const hasMatch = (team.match_score !== null && team.match_score !== undefined);
+        const matchBadge = hasMatch ? `
+            <div class="flex items-center justify-between gap-1.5 bg-slate-900/80 px-2.5 py-1.5 rounded-xl border border-slate-800 mb-1">
+                <div class="flex items-center gap-1.5">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${team.match_score >= 75 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : (team.match_score >= 50 ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-400')}">
+                        ${team.match_score}% Match
+                    </span>
+                    ${team.match_reasons && team.match_reasons.length ? `<span class="text-[10px] text-indigo-300 truncate max-w-[190px]">${team.match_reasons[0]}</span>` : ''}
+                </div>
+                ${team.match_breakdown ? `
+                    <button onclick="toggleTeamBreakdown(${team.id})" class="text-[10px] text-indigo-400 hover:text-white transition">Why?</button>
+                ` : ''}
+            </div>
+            ${team.match_breakdown ? `
+                <div id="team-breakdown-${team.id}" class="hidden space-y-1 bg-slate-950/90 p-2 rounded-lg border border-slate-800 text-[10px] text-slate-300 mb-1">
+                    <div class="grid grid-cols-2 gap-1 text-[10px]">
+                        <div>Skills: <strong class="text-white">${team.match_breakdown.skills_pct || 0}%</strong></div>
+                        <div>Interests: <strong class="text-white">${team.match_breakdown.interests_pct || 0}%</strong></div>
+                        <div>Roles: <strong class="text-white">${team.match_breakdown.roles_pct || 0}%</strong></div>
+                        <div>Availability: <strong class="text-white">${team.match_breakdown.availability_pct || 0}%</strong></div>
+                    </div>
+                </div>
+            ` : ''}
+        ` : '';
+
         return `
             <div class="glass-card rounded-2xl p-5 border-slate-800 hover:border-indigo-600/60 transition flex flex-col justify-between space-y-4">
                 <div class="space-y-3">
@@ -2027,6 +2245,8 @@ function renderBrowseTeamsList(data) {
                             ${team.vacancies > 0 ? team.vacancies + ' open' : 'Full'}
                         </span>
                     </div>
+
+                    ${matchBadge}
 
                     ${team.team_description ? `<p class="text-xs text-slate-300 line-clamp-2 italic">${team.team_description}</p>` : ''}
 
@@ -2042,6 +2262,27 @@ function renderBrowseTeamsList(data) {
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hiring Roles:</p>
                         <div class="flex flex-wrap gap-1">${rolesChips}</div>
                     </div>` : ''}
+
+                    <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+                        <span><i class="fa-solid fa-clock mr-1 text-slate-500"></i>${team.availability}</span>
+                        <span><i class="fa-solid fa-users mr-1 text-slate-500"></i>${team.current_team_size}/${totalSlots} members</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-slate-800 gap-2">
+                    <button onclick="navigateToTeam(${team.id})" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition font-medium">
+                        View Team
+                    </button>
+                    ${team.vacancies > 0 ? `
+                        <button onclick="requestJoinTeam(${team.id})" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1">
+                            <i class="fa-solid fa-user-plus text-[10px]"></i> Join Team
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
                     <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
                         <span><i class="fa-solid fa-clock mr-1 text-slate-500"></i>${team.availability}</span>
@@ -2165,12 +2406,14 @@ async function loadBrowseStudents(page = 1) {
         page: page,
         per_page: 18
     });
-    if (search) params.append('skill', search);
+    if (search) params.append('search', search);
     if (college) params.append('college', college);
     if (skill) params.append('skill', skill);
     if (role) params.append('role', role);
     if (avail) params.append('availability', avail);
     if (exp) params.append('experience', exp);
+    const sortBy = document.getElementById('filter-team-sort')?.value || 'best_match';
+    if (sortBy) params.append('sort_by', sortBy);
     if (gapTeamId) params.append('fills_gap_for_team_id', gapTeamId);
 
     try {
@@ -2206,6 +2449,35 @@ function renderBrowseStudentsList(data) {
             <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-950/70 text-purple-300 border border-purple-800/60">${r}</span>
         `).join('');
 
+        const hasMatch = (student.match_score !== null && student.match_score !== undefined);
+        const matchBadge = hasMatch ? `
+            <div class="flex items-center justify-between gap-1.5 bg-slate-900/80 px-2.5 py-1.5 rounded-xl border border-slate-800 mb-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${student.match_score >= 75 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : (student.match_score >= 50 ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-400')}">
+                        ${student.match_score}% Match
+                    </span>
+                    ${student.missing_skills_covered && student.missing_skills_covered.length ? `
+                        <span class="text-[10px] font-semibold text-emerald-400">
+                            <i class="fa-solid fa-puzzle-piece mr-0.5"></i> Covers: ${student.missing_skills_covered.slice(0, 2).join(', ')}
+                        </span>
+                    ` : (student.match_reasons && student.match_reasons.length ? `<span class="text-[10px] text-slate-400 truncate max-w-[170px]">${student.match_reasons[0]}</span>` : '')}
+                </div>
+                ${student.match_breakdown ? `
+                    <button onclick="toggleStudentBreakdown(${student.id})" class="text-[10px] text-purple-400 hover:text-white transition">Why?</button>
+                ` : ''}
+            </div>
+            ${student.match_breakdown ? `
+                <div id="student-breakdown-${student.id}" class="hidden space-y-1 bg-slate-950/90 p-2 rounded-lg border border-slate-800 text-[10px] text-slate-300 mb-1">
+                    <div class="grid grid-cols-2 gap-1 text-[10px]">
+                        <div>Complementarity: <strong class="text-white">${student.match_breakdown.skills_pct || 0}%</strong></div>
+                        <div>Interests: <strong class="text-white">${student.match_breakdown.interests_pct || 0}%</strong></div>
+                        <div>Roles: <strong class="text-white">${student.match_breakdown.roles_pct || 0}%</strong></div>
+                        <div>Availability: <strong class="text-white">${student.match_breakdown.availability_pct || 0}%</strong></div>
+                    </div>
+                </div>
+            ` : ''}
+        ` : '';
+
         return `
             <div class="glass-card rounded-2xl p-5 border-slate-800 hover:border-purple-600/60 transition flex flex-col justify-between space-y-4">
                 <div class="space-y-3">
@@ -2229,6 +2501,8 @@ function renderBrowseStudentsList(data) {
                             <span class="text-[9px] text-slate-500 block -mt-1">Reliability</span>
                         </div>
                     </div>
+
+                    ${matchBadge}
 
                     ${student.bio ? `<p class="text-xs text-slate-300 line-clamp-2 italic">"${student.bio}"</p>` : ''}
 

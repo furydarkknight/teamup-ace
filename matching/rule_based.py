@@ -200,6 +200,16 @@ class RuleBasedMatcher(BaseMatcher):
         if collab_score >= 0.7:
             reasons.append(f"Collaboration: Aligned working culture.")
 
+        breakdown = {
+            "skills": round(gap_score * 100),
+            "interests": round(interest_score * 100),
+            "roles": round(role_score * 100),
+            "experience": round(exp_score * 100),
+            "availability": round(avail_score * 100),
+            "collaboration": round(collab_score * 100),
+            "team_size": round(size_score * 100)
+        }
+
         return MatchResult(
             user_id=student.id,
             team_id=getattr(team, 'id', None),
@@ -208,6 +218,8 @@ class RuleBasedMatcher(BaseMatcher):
             complementary_skills=covered_skills,
             shared_interests=shared_interests,
             missing_skills_covered=covered_skills,
+            breakdown=breakdown,
+            engine="Rule-based engine"
         )
 
     def match_student_to_teams(self, student: Any, teams: List[Any]) -> List[MatchResult]:

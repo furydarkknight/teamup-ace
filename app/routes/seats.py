@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api", tags=["Open Seats"])
 @router.post("/seats", response_model=OpenSeatResponse)
 def create_open_seat(
     data: OpenSeatCreate,
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     team = db.query(Team).filter(Team.id == data.team_id).first()

@@ -14,6 +14,8 @@ class MatchResult:
     workstyle_compatibility: int = 75
     is_mentor_match: bool = False
     notes: Optional[str] = None
+    breakdown: Dict[str, Any] = field(default_factory=dict)
+    engine: str = "Rule-based engine"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -26,7 +28,9 @@ class MatchResult:
             "missing_skills_covered": self.missing_skills_covered,
             "workstyle_compatibility": self.workstyle_compatibility,
             "is_mentor_match": self.is_mentor_match,
-            "notes": self.notes
+            "notes": self.notes,
+            "breakdown": self.breakdown,
+            "engine": self.engine
         }
 
 class BaseMatcher(ABC):

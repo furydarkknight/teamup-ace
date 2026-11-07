@@ -83,10 +83,32 @@ def run_migrations():
 
     # Add indexes for teams if missing
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_team_id ON teams (team_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_name ON teams (name)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_team_name ON teams (team_name)")
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_college ON teams (college)")
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_vacancies ON teams (vacancies)")
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_preferred_experience ON teams (preferred_experience)")
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_availability ON teams (availability)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_teams_required_skills ON teams (required_skills_json)")
+
+    # Ensure student_profiles rows exist for all existing users
+    try:
+        cursor.execute("""
+            INSERT OR IGNORE INTO student_profiles (
+                user_id, student_id, college, city, year, bio,
+                skills_json, skill_proficiency_json, interests_json,
+                preferred_roles_json, experience_level, availability,
+                preferred_team_size, collaboration_preference, project_experience_json
+            )
+            SELECT 
+                id, student_id, college, city, year, COALESCE(bio, short_bio, ''),
+                COALESCE(skills_json, '[]'), COALESCE(skill_proficiency_json, '{}'), COALESCE(interests_json, '[]'),
+                COALESCE(preferred_roles_json, '[]'), COALESCE(experience_level, 'Intermediate'), COALESCE(availability, 'Full-time'),
+                COALESCE(preferred_team_size, 4), COALESCE(collaboration_preference, ''), COALESCE(project_experience_json, '[]')
+            FROM users
+        """)
+    except Exception as e:
+        print(f"[Migration] Backfill student_profiles warning: {e}")
 
     conn.commit()
     conn.close()

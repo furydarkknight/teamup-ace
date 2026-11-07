@@ -135,6 +135,58 @@ Both suites pass with **100% success** across all endpoints.
 
 ---
 
+## 🧪 Testing & Verification Suites
+
+The platform includes three comprehensive automated verification suites verifying all capabilities end-to-end against live database sessions:
+
+```bash
+# 1. Core Platform & ML Matcher Suite (14 tests)
+python test_app.py
+
+# 2. 8-Phase Platform Expansion Suite (14 suites, 60+ assertions)
+python test_expansion.py
+
+# 3. Bug-Fix, Data Persistence & Auth Suite (42 assertions)
+python test_bugfix.py
+```
+
+### Test Suite Results Summary:
+
+| Suite | Scope | Status | Coverage |
+|-------|-------|--------|----------|
+| `test_app.py` | Demo login, AI complement matcher, ML fallback, icebreakers, team gap analyzer, team chat, peer reliability, categories, join flow | **100% PASS** (14/14) | Core TeamUp Engine |
+| `test_expansion.py` | Opportunities Hub (63 listings), Jobs & Internships (80 postings), 1-click apply, Resumes, Tracking timeline, Learn/Certificates, Digital Portfolio, Mentorship, Portals | **100% PASS** (14/14) | Unstop/Naukri Expansion |
+| `test_bugfix.py` | Any-email signup (Gmail/Outlook), Auto `.edu` verification, DB persistence, Sequential `S1001+`/`T301+` IDs, Live team search, Per-user dynamic recommendations, Profile updates, Forgot password token, Join vacancy deduction | **100% PASS** (42/42) | Quality & Data Persistence |
+
+---
+
+## 🛠️ Key Improvements & Root Cause Fixes
+
+1. **Database Path & Persistence (Root Cause: Relative SQLite URL):**
+   - *Problem:* Relative `sqlite:///./teamup.db` resolved to different files depending on execution directory.
+   - *Fix:* Configured absolute path resolution in `app/config/__init__.py`. Linked new `StudentProfile` table with auto-backfill on migration.
+
+2. **Sequential Display IDs (Root Cause: Null/Colliding IDs):**
+   - *Problem:* New users and teams had null or conflicting IDs with dataset (`S0001-S1000`, `T001-T300`).
+   - *Fix:* Implemented atomic sequence generators `generate_next_student_id()` (`S1001+`) and `generate_next_team_id()` (`T301+`) in `app/models.py`.
+
+3. **Any-Email Signup & Optional Verification (Root Cause: Hardcoded .edu guard):**
+   - *Problem:* `get_current_verified_user` rejected non-institutional emails from team creation.
+   - *Fix:* Allowed any valid email (Gmail, Outlook, Yahoo) to sign up, create teams, and apply. `.edu` and `.ac.in` emails automatically receive the "Verified College Student" badge; other emails can verify anytime.
+
+4. **Interactive Auth Window Redesign:**
+   - Centered, mobile-responsive auth modal with Sign In, Sign Up, and Forgot Password tabs.
+   - Password show/hide visibility toggles, "Remember me" persistence, confirm password validation, inline error handling, and mock reset token generation.
+
+5. **Live Search & Match Scores on Teams & Students:**
+   - *Problem:* Search input was mapped to `skill` instead of database `search`, and unauthenticated requests didn't compute personalized match scores.
+   - *Fix:* Added database-level `search` across team name, college, and skills. Browse endpoints compute color-coded match percentages (≥75% green, 50-74% amber, <50% slate) and explainable reasons for every card.
+
+6. **Dynamic Recommendation Provenance:**
+   - Displays scoring provenance badge (`🤖 ML Model` or `⚡ Rule-based`) and an expandable "Why this?" sub-score breakdown (skills, interests, roles, availability).
+
+---
+
 ## ☁️ Deployment
 
 - **Render Blueprint**: Pre-configured `render.yaml` and `Procfile` ready for zero-downtime deployment.

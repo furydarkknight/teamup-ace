@@ -1,17 +1,20 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, Team
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_user_optional
 from app.schemas import UserPublicResponse, PaginatedStudentsResponse
+from matching import get_matcher
 
 router = APIRouter(prefix="/api/students", tags=["Students"])
 
 @router.get("", response_model=PaginatedStudentsResponse)
+@router.get("/browse", response_model=PaginatedStudentsResponse)
 def browse_students(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    search: Optional[str] = None,
     college: Optional[str] = None,
     skill: Optional[str] = None,
     interest: Optional[str] = None,
@@ -19,14 +22,19 @@ def browse_students(
     availability: Optional[str] = None,
     experience: Optional[str] = None,
     fills_gap_for_team_id: Optional[int] = None,
+    sort_by: Optional[str] = Query("best_match", description="best_match, reliability, newest"),
+    min_match_pct: Optional[int] = Query(None, ge=0, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
-    Browse all students with filters.
-    fills_gap_for_team_id: when provided, boosts students whose skills cover the team's required_skills gaps.
+    Browse all students with filters, team-scoped complement match percentages, and gap coverage.
     """
     query = db.query(User)
+
+    if search:
+        s = f"%{search.strip()}%"
+        query = query.filter(User.name.ilike(s) | User.college.ilike(s) | User.skills_json.ilike(s))
 
     if college:
         query = query.filter(User.college.ilike(f"%{college}%"))
@@ -41,32 +49,57 @@ def browse_students(
     if role:
         query = query.filter(User.preferred_roles_json.ilike(f"%{role}%"))
 
-    blocked = set(current_user.blocked_users or [])
-    users = query.order_by(User.reliability_score.desc(), User.id.asc()).all()
+    blocked = set(current_user.blocked_users or []) if current_user else set()
+    current_uid = current_user.id if current_user else -1
+    users = query.all()
+    users = [u for u in users if u.id not in blocked and u.id != current_uid]
 
-    users = [u for u in users if u.id not in blocked and u.id != current_user.id]
-
+    # Resolve target team for match scoring
+    target_team = None
     if fills_gap_for_team_id:
-        team = db.query(Team).filter(Team.id == fills_gap_for_team_id).first()
-        if team:
-            required = set(s.lower() for s in (team.required_skills or []))
-            current_team_skills = set(s.lower() for s in (team.current_skills or {}).keys())
-            gap_skills = required - current_team_skills
+        target_team = db.query(Team).filter(Team.id == fills_gap_for_team_id).first()
+    elif current_user and current_user.teams_created:
+        target_team = current_user.teams_created[0]
 
-            def gap_score(u: User):
-                u_skills = set(s.lower() for s in (u.skills or []))
-                return len(u_skills & gap_skills)
+    match_map = {}
+    if target_team:
+        try:
+            matcher = get_matcher()
+            m_res = matcher.match_team_to_students(target_team, users)
+            match_map = {r.user_id: r for r in m_res}
+        except Exception as e:
+            print(f"[Matcher Warning] {e}")
 
-            users = sorted(users, key=gap_score, reverse=True)
+    # Min match filter if provided
+    if min_match_pct is not None and match_map:
+        users = [u for u in users if (match_map.get(u.id).score if match_map.get(u.id) else 0) >= min_match_pct]
+
+    # Sorting
+    if sort_by == "best_match" and match_map:
+        users.sort(key=lambda u: match_map.get(u.id).score if match_map.get(u.id) else 0, reverse=True)
+    elif sort_by == "newest":
+        users.sort(key=lambda u: u.id, reverse=True)
+    else:  # reliability
+        users.sort(key=lambda u: u.reliability_score or 0.0, reverse=True)
 
     total = len(users)
     start = (page - 1) * per_page
     end = start + per_page
     page_users = users[start:end]
 
-    items = [UserPublicResponse.from_orm(u) for u in page_users]
-    pages = max(1, (total + per_page - 1) // per_page)
+    items = []
+    for u in page_users:
+        resp = UserPublicResponse.from_orm(u)
+        m = match_map.get(u.id)
+        if m:
+            resp.match_score = m.score
+            resp.match_reasons = m.reasons
+            resp.missing_skills_covered = m.missing_skills_covered
+            resp.match_breakdown = getattr(m, "breakdown", {})
+            resp.engine = getattr(m, "engine", "Rule-based engine")
+        items.append(resp)
 
+    pages = max(1, (total + per_page - 1) // per_page)
     return PaginatedStudentsResponse(items=items, total=total, page=page, pages=pages)
 
 

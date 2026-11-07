@@ -1,10 +1,10 @@
 import math
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Team, TeamMember, Event, User, TeamMessage, TeamJoinRequest
-from app.auth import get_current_user, get_current_verified_user
+from app.models import Team, TeamMember, Event, User, TeamMessage, TeamJoinRequest, generate_next_team_id
+from app.auth import get_current_user, get_current_user_optional
 from app.schemas import (
     TeamCreate, TeamUpdate, TeamResponse, TeamMemberResponse,
     TeamGapAnalysisResponse, TeamMessageCreate, TeamMessageResponse,
@@ -18,7 +18,7 @@ from matching import get_matcher
 router = APIRouter(prefix="/api/teams", tags=["Teams"])
 recommended_router = APIRouter(prefix="/api/me", tags=["Recommendations"])
 
-def _build_team_response(team: Team) -> TeamResponse:
+def _build_team_response(team: Team, match_res: Optional[Any] = None) -> TeamResponse:
     members_res = []
     for m in (team.members or []):
         members_res.append(TeamMemberResponse(
@@ -54,33 +54,61 @@ def _build_team_response(team: Team) -> TeamResponse:
         event_id=team.event_id,
         event_name=team.event.name if team.event else None,
         members=members_res,
-        created_at=team.created_at
+        created_at=team.created_at,
+        match_score=match_res.score if match_res else None,
+        match_reasons=match_res.reasons if match_res else None,
+        match_breakdown=match_res.breakdown if match_res else None,
+        engine=match_res.engine if match_res else None
     )
 
 @router.get("", response_model=List[TeamResponse])
 def get_teams(
     event_id: Optional[int] = None,
+    search: Optional[str] = None,
     my_teams_only: Optional[bool] = False,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
-    """Legacy endpoint for compatibility with event detail and dashboard."""
+    """Team listing endpoint with search and optional auth."""
     query = db.query(Team)
 
     if event_id:
         query = query.filter(Team.event_id == event_id)
 
+    if search:
+        s = f"%{search.strip()}%"
+        query = query.filter(
+            Team.name.ilike(s) |
+            Team.team_name.ilike(s) |
+            Team.tagline.ilike(s) |
+            Team.college.ilike(s) |
+            Team.team_description.ilike(s)
+        )
+
     if my_teams_only:
+        if not current_user:
+            return []
         team_ids = [m.team_id for m in current_user.memberships]
         query = query.filter(Team.id.in_(team_ids))
 
     teams = query.order_by(Team.created_at.desc()).limit(100).all()
-    return [_build_team_response(t) for t in teams]
+
+    match_map = {}
+    if current_user:
+        try:
+            matcher = get_matcher()
+            m_res = matcher.match_student_to_teams(current_user, teams)
+            match_map = {r.team_id: r for r in m_res}
+        except Exception as e:
+            print(f"[Matcher Warning] {e}")
+
+    return [_build_team_response(t, match_map.get(t.id)) for t in teams]
 
 @router.get("/browse", response_model=PaginatedTeamsResponse)
 def browse_teams(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    search: Optional[str] = None,
     college: Optional[str] = None,
     skill: Optional[str] = None,
     interest: Optional[str] = None,
@@ -88,11 +116,23 @@ def browse_teams(
     availability: Optional[str] = None,
     experience: Optional[str] = None,
     vacancies_gt_0: Optional[bool] = True,
+    sort_by: Optional[str] = Query("best_match", description="best_match, vacancies, newest"),
+    min_match_pct: Optional[int] = Query(None, ge=0, le=100),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    """Browse teams with filters and pagination."""
+    """Browse teams with live complement match scoring, filters, and pagination."""
     query = db.query(Team)
 
+    if search:
+        s = f"%{search.strip()}%"
+        query = query.filter(
+            Team.name.ilike(s) |
+            Team.team_name.ilike(s) |
+            Team.tagline.ilike(s) |
+            Team.college.ilike(s) |
+            Team.team_description.ilike(s)
+        )
     if college:
         query = query.filter(Team.college.ilike(f"%{college}%"))
     if availability:
@@ -111,23 +151,53 @@ def browse_teams(
     if vacancies_gt_0:
         query = query.filter(Team.vacancies > 0)
 
-    total = query.count()
-    teams = query.order_by(Team.vacancies.desc(), Team.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    teams = query.all()
+
+    # Compute complement matches for current user
+    match_map = {}
+    if current_user:
+        try:
+            matcher = get_matcher()
+            m_res = matcher.match_student_to_teams(current_user, teams)
+            match_map = {r.team_id: r for r in m_res}
+        except Exception as e:
+            print(f"[Matcher Warning] {e}")
+
+    # Min match filter if provided
+    if min_match_pct is not None and current_user:
+        teams = [t for t in teams if (match_map.get(t.id).score if match_map.get(t.id) else 0) >= min_match_pct]
+
+    # Sort logic
+    if sort_by == "best_match" and current_user:
+        teams.sort(key=lambda t: match_map.get(t.id).score if match_map.get(t.id) else 0, reverse=True)
+    elif sort_by == "newest":
+        teams.sort(key=lambda t: t.created_at, reverse=True)
+    else:  # vacancies
+        teams.sort(key=lambda t: (t.vacancies or 0, t.created_at), reverse=True)
+
+    total = len(teams)
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_teams = teams[start:end]
     pages = max(1, math.ceil(total / per_page))
 
-    items = [_build_team_response(t) for t in teams]
+    items = [_build_team_response(t, match_map.get(t.id)) for t in page_teams]
     return PaginatedTeamsResponse(items=items, total=total, page=page, pages=pages)
 
 @router.post("", response_model=TeamResponse)
 def create_team(
     data: TeamCreate,
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     team_name = data.team_name.strip()
     college = data.college or current_user.college or "University"
     
+    # Safe sequential team ID (e.g. T301)
+    next_team_id = generate_next_team_id(db)
+
     new_team = Team(
+        team_id=next_team_id,
         event_id=data.event_id or 1,
         name=team_name,
         team_name=team_name,
@@ -136,18 +206,19 @@ def create_team(
         tagline="Innovating together",
         team_description=data.team_description or "",
         collaboration_preference=data.collaboration_preference or current_user.collaboration_preference or "",
-        vacancies=data.vacancies if data.vacancies is not None else 3,
+        vacancies=max(1, data.vacancies if data.vacancies is not None else 3),
         preferred_experience=data.preferred_experience or "Intermediate",
         availability=data.availability or "Full-time",
+        current_team_size=1
     )
     new_team.required_skills = data.required_skills or []
     new_team.preferred_skills = data.preferred_skills or []
-    new_team.skill_requirements = data.skill_requirements or {}
+    new_team.skill_requirements = data.skill_requirements or {s: 3 for s in (data.required_skills or [])}
     new_team.interests = data.interests or []
     new_team.preferred_roles = data.preferred_roles or []
 
     # Leader initial membership and skills
-    leader_student_id = current_user.student_id or f"U{current_user.id}"
+    leader_student_id = current_user.student_id or f"S{current_user.id:04d}"
     new_team.current_members = [leader_student_id]
     new_team.current_skills = current_user.skill_proficiency or {}
 
@@ -176,7 +247,7 @@ def get_team_detail(team_id: int, db: Session = Depends(get_db)):
 def update_team(
     team_id: int,
     data: TeamUpdate,
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     team = db.query(Team).filter(Team.id == team_id).first()
@@ -424,9 +495,18 @@ def get_recommended_teams(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    all_teams = db.query(Team).filter(Team.vacancies > 0).all()
+    # Exclude teams user already belongs to
+    my_team_ids = {m.team_id for m in current_user.memberships}
+    if current_user.teams_created:
+        my_team_ids.update(t.id for t in current_user.teams_created)
+
+    query = db.query(Team).filter(Team.vacancies > 0)
+    if my_team_ids:
+        query = query.filter(~Team.id.in_(my_team_ids))
+
+    all_teams = query.all()
     if not all_teams:
-        return {"items": [], "total": 0, "page": page, "pages": 1}
+        return {"items": [], "total": 0, "page": page, "pages": 1, "engine": "Rule-based engine"}
 
     matcher = get_matcher()
     match_results = matcher.match_student_to_teams(current_user, all_teams)
@@ -436,11 +516,13 @@ def get_recommended_teams(
     start = (page - 1) * per_page
     page_results = match_results[start:start + per_page]
 
+    engine_name = "Rule-based engine"
     items = []
     for res in page_results:
         team = team_lookup.get(res.team_id)
         if not team:
             continue
+        engine_name = getattr(res, "engine", "Rule-based engine")
         items.append({
             "id": team.id,
             "team_id": team.team_id,
@@ -450,8 +532,81 @@ def get_recommended_teams(
             "shared_interests": res.shared_interests,
             "missing_skills_covered": res.missing_skills_covered,
             "notes": res.notes,
-            "team": _build_team_response(team).dict()
+            "breakdown": getattr(res, "breakdown", {}),
+            "engine": engine_name,
+            "team": _build_team_response(team, res).dict()
         })
 
     pages = max(1, math.ceil(total / per_page))
-    return {"items": items, "total": total, "page": page, "pages": pages}
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "engine": engine_name
+    }
+
+
+debug_router = APIRouter(prefix="/api/debug", tags=["Debug"])
+
+@debug_router.get("/recommendations")
+def debug_recommendations(
+    student_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Admin debug endpoint to inspect feature vector, schema alignment, and score breakdown."""
+    target_student = current_user
+    if student_id:
+        try:
+            sid_int = int(student_id)
+            target_student = db.query(User).filter(User.id == sid_int).first() or current_user
+        except ValueError:
+            target_student = db.query(User).filter(User.student_id == student_id).first() or current_user
+
+    first_team = db.query(Team).filter(Team.vacancies > 0).first()
+    if not first_team:
+        return {"error": "No teams found"}
+
+    from matching.features import build_features
+    features = build_features(target_student, first_team)
+    matcher = get_matcher()
+    results = matcher.match_student_to_teams(target_student, [first_team])
+    res = results[0] if results else None
+
+    import json
+    from pathlib import Path
+    schema_path = Path("models/feature_schema.json")
+    schema_features = []
+    if schema_path.exists():
+        try:
+            schema_data = json.load(open(schema_path))
+            schema_features = schema_data.get("feature_names", [])
+        except Exception:
+            pass
+
+    return {
+        "student": {
+            "id": target_student.id,
+            "student_id": target_student.student_id,
+            "name": target_student.name,
+            "skills": target_student.skills,
+            "skill_proficiency": target_student.skill_proficiency,
+            "interests": target_student.interests
+        },
+        "sample_team": {
+            "id": first_team.id,
+            "team_id": first_team.team_id,
+            "name": first_team.name,
+            "required_skills": first_team.required_skills,
+            "skill_requirements": first_team.skill_requirements
+        },
+        "engine": getattr(res, "engine", getattr(matcher, "__class__", type(matcher)).__name__),
+        "features_count": len(features),
+        "schema_features_count": len(schema_features),
+        "schema_matches_exact": len(features) == len(schema_features),
+        "score": res.score if res else 0,
+        "breakdown": getattr(res, "breakdown", {}) if res else {},
+        "reasons": res.reasons if res else [],
+        "feature_vector_sample": features[:20]
+    }

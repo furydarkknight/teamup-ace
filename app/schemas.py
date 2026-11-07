@@ -24,6 +24,19 @@ class SignUpRequest(BaseModel):
     college: str
     city: Optional[str] = "Delhi"
     year: Optional[str] = "3rd Year"
+    skills: Optional[List[str]] = None
+    skill_proficiency: Optional[Dict[str, int]] = None
+    interests: Optional[List[str]] = None
+    preferred_roles: Optional[List[str]] = None
+    experience_level: Optional[str] = "Intermediate"
+    availability: Optional[str] = "Full-time"
+    preferred_team_size: Optional[int] = 4
+    collaboration_preference: Optional[str] = ""
+    bio: Optional[str] = ""
+    project_experience: Optional[List[str]] = None
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
 
 class LoginRequest(BaseModel):
     email: str
@@ -62,6 +75,11 @@ class UserPublicResponse(BaseModel):
     seeking_mentor: bool = False
     reliability_score: float = 0.0
     ratings_count: int = 0
+    match_score: Optional[int] = None
+    match_reasons: Optional[List[str]] = None
+    missing_skills_covered: Optional[List[str]] = None
+    match_breakdown: Optional[Dict[str, Any]] = None
+    engine: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -141,6 +159,10 @@ class TeamResponse(BaseModel):
     event_name: Optional[str] = None
     members: List[TeamMemberResponse] = []
     created_at: datetime
+    match_score: Optional[int] = None
+    match_reasons: Optional[List[str]] = None
+    match_breakdown: Optional[Dict[str, Any]] = None
+    engine: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -150,7 +172,7 @@ class TeamCreate(BaseModel):
     college: Optional[str] = None
     required_skills: List[str]
     preferred_skills: Optional[List[str]] = []
-    skill_requirements: Dict[str, int]
+    skill_requirements: Optional[Dict[str, int]] = None
     interests: Optional[List[str]] = []
     preferred_experience: Optional[str] = "Intermediate"
     availability: Optional[str] = "Full-time"

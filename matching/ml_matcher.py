@@ -109,7 +109,8 @@ class MLMatcher(BaseMatcher):
         if self.model is None:
             results = list(rule_results.values())
             for r in results:
-                r.notes = "Rule-based scoring (ML model not loaded)"
+                r.engine = "Rule-based fallback"
+                r.notes = "Rule-based fallback (ML model not loaded)"
             return sorted(results, key=lambda x: x.score, reverse=True)
 
         try:
@@ -117,9 +118,10 @@ class MLMatcher(BaseMatcher):
             team_texts = [self._team_text(t) for t in eligible_teams]
             similarities = self._ml_scores(student_text, team_texts)
         except Exception as e:
-            print(f"[MLMatcher] Encoding error: {e}")
+            print(f"[MLMatcher] Encoding error: {e}. Using rule-based fallback.")
             results = list(rule_results.values())
             for r in results:
+                r.engine = "Rule-based fallback"
                 r.notes = f"Rule-based fallback (ML error: {e})"
             return sorted(results, key=lambda x: x.score, reverse=True)
 
@@ -137,6 +139,9 @@ class MLMatcher(BaseMatcher):
                 complementary_skills=base.complementary_skills if base else [],
                 shared_interests=base.shared_interests if base else [],
                 missing_skills_covered=base.missing_skills_covered if base else [],
+                workstyle_compatibility=base.workstyle_compatibility if base else 75,
+                breakdown=base.breakdown if base else {},
+                engine="ML model",
                 notes="Scored by ace_teamup_model_v2 (sentence-transformers)"
             ))
 
@@ -155,7 +160,8 @@ class MLMatcher(BaseMatcher):
         if self.model is None:
             results = list(rule_results.values())
             for r in results:
-                r.notes = "Rule-based scoring (ML model not loaded)"
+                r.engine = "Rule-based fallback"
+                r.notes = "Rule-based fallback (ML model not loaded)"
             return sorted(results, key=lambda x: x.score, reverse=True)
 
         try:
@@ -167,9 +173,10 @@ class MLMatcher(BaseMatcher):
             student_embs = embeddings[1:]
             similarities = [self._cosine(team_emb, s_emb) for s_emb in student_embs]
         except Exception as e:
-            print(f"[MLMatcher] Encoding error: {e}")
+            print(f"[MLMatcher] Encoding error: {e}. Using rule-based fallback.")
             results = list(rule_results.values())
             for r in results:
+                r.engine = "Rule-based fallback"
                 r.notes = f"Rule-based fallback (ML error: {e})"
             return sorted(results, key=lambda x: x.score, reverse=True)
 
@@ -187,6 +194,9 @@ class MLMatcher(BaseMatcher):
                 complementary_skills=base.complementary_skills if base else [],
                 shared_interests=base.shared_interests if base else [],
                 missing_skills_covered=base.missing_skills_covered if base else [],
+                workstyle_compatibility=base.workstyle_compatibility if base else 75,
+                breakdown=base.breakdown if base else {},
+                engine="ML model",
                 notes="Scored by ace_teamup_model_v2 (sentence-transformers)"
             ))
 
