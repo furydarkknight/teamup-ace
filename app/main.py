@@ -66,7 +66,7 @@ def get_app_config():
         "ml_model_exists": (BASE_DIR / "models" / "modules.json").exists() or (BASE_DIR / "models" / "ace_teamup_model_v2").exists()
     }
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def serve_index(request: Request):
     return templates.TemplateResponse(
         request=request,
