@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} - AI Hackathon Team Finder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-600 selection:text-white">
+
+    <!-- TOP NAVIGATION -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.hash = '#landing'">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-users-viewfinder text-white text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-lg font-black tracking-tight text-white font-sans">{{ app_name.split(' ')[0] }}</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800/60">by ACE</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 -mt-0.5 hidden sm:block">AI Team Finder & Collab</p>
+                </div>
+            </div>
+
+            <!-- Center Matcher Status Pill -->
+            <div class="hidden md:flex items-center" id="matcher-badge">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-950/70 text-indigo-300 border border-indigo-800/60">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Modular Matcher Active
+                </span>
+            </div>
+
+            <!-- Nav Links & Auth CTA -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <a href="#events" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-days text-slate-400"></i> Hackathons
+                </a>
+
+                <a href="#my-teams" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition hidden sm:inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-people-group text-slate-400"></i> My Teams
+                </a>
+
+                <button onclick="openInvitesModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-envelope text-slate-400"></i>
+                    <span class="hidden sm:inline">Invites</span>
+                </button>
+
+                <!-- Demo User One-Click Login Pill -->
+                <button id="demo-quick-btn" onclick="loginDemoUser()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span>Instant Demo</span>
+                </button>
+
+                <!-- When Logged Out -->
+                <div id="auth-actions" class="flex items-center gap-1.5">
+                    <button onclick="openModal('auth-modal')" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition">
+                        Sign In
+                    </button>
+                </div>
+
+                <!-- When Logged In -->
+                <div id="user-menu" class="hidden flex items-center gap-2">
+                    <div class="flex items-center gap-2 pl-2 border-l border-slate-800 cursor-pointer" onclick="openProfileModal()">
+                        <div class="relative">
+                            <img id="nav-user-avatar" src="" alt="Avatar" class="w-8 h-8 rounded-xl bg-slate-800 p-0.5 border border-slate-700">
+                            <span id="nav-user-verified" class="hidden absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 text-slate-950 rounded-full flex items-center justify-center text-[9px] font-bold">
+                                <i class="fa-solid fa-check"></i>
+                            </span>
+                        </div>
+                        <div class="hidden md:block text-left">
+                            <p id="nav-user-name" class="text-xs font-bold text-white truncate max-w-[120px]"></p>
+                            <p id="nav-user-reliability" class="text-[10px] text-slate-400"></p>
+                        </div>
+                    </div>
+                    <button onclick="logout()" class="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition" title="Log Out">
+                        <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER (SPA VIEWS) -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- 1. LANDING PAGE VIEW -->
+        <section id="view-landing" class="space-y-16 py-6">
+            <!-- Hero -->
+            <div class="text-center max-w-3xl mx-auto space-y-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 shadow-inner">
+                    <i class="fa-solid fa-trophy text-amber-400"></i> Prototype for ACE TeamUp Challenge • Hackathon 5.0
+                </div>
+                <h1 class="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight">
+                    Stop finding teammates in <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-amber-400">chaotic WhatsApp groups.</span>
+                </h1>
+                <p class="text-base sm:text-lg text-slate-300 font-normal leading-relaxed">
+                    TeamUp is the AI-powered team formation engine for <strong>AllCollegeEvent.com</strong>.
+                    Match by <em>skill complement</em>, verify college credentials, analyze team gaps, and test compatibility with 10-minute icebreaker challenges.
+                </p>
+
+                <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button onclick="loginDemoUser()" class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 flex items-center gap-2 transition hover:scale-105">
+                        <i class="fa-solid fa-bolt text-amber-300"></i> Try Demo Flow (Aarav - MAIT)
+                    </button>
+                    <a href="#events" class="px-6 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm border border-slate-700/80 flex items-center gap-2 transition">
+                        <i class="fa-solid fa-compass text-indigo-400"></i> Explore 8 Hackathons
+                    </a>
+                </div>
+
+                <!-- Live Metrics -->
+                <div class="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto text-left">
+                    <div class="glass-card p-3.5 rounded-xl border-slate-800">
+                        <p class="text-2xl font-black text-white">50+</p>
+                        <p class="text-xs text-slate-400 font-medium">Students Seeded</p>
+                    </div>
+                    <div class="glass-card p-3.5 rounded-xl border-slate-800">
+                        <p class="text-2xl font-black text-indigo-400">8</p>
+                        <p class="text-xs text-slate-400 font-medium">Active Hackathons</p>
+                    </div>
+                    <div class="glass-card p-3.5 rounded-xl border-slate-800">
+                        <p class="text-2xl font-black text-emerald-400">0-100</p>
+                        <p class="text-xs text-slate-400 font-medium">Reliability Score</p>
+                    </div>
+                    <div class="glass-card p-3.5 rounded-xl border-slate-800">
+                        <p class="text-2xl font-black text-purple-400">100%</p>
+                        <p class="text-xs text-slate-400 font-medium">Verified Colleges</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- "WHY TEAMUP" COMPARISON SECTION -->
+            <div class="max-w-5xl mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Why TeamUp vs Existing Alternatives?</h2>
+                    <p class="text-sm text-slate-400 mt-2">Team formation should be the core product, not an afterthought in a chat group.</p>
+                </div>
+
+                <div class="overflow-x-auto glass-card rounded-2xl border border-slate-800">
+                    <table class="w-full text-left text-xs sm:text-sm">
+                        <thead class="bg-slate-900/90 text-slate-300 font-semibold border-b border-slate-800">
+                            <tr>
+                                <th class="p-4">Key Dimension</th>
+                                <th class="p-4 text-slate-400">WhatsApp Groups</th>
+                                <th class="p-4 text-slate-400">Listing Platforms (Unstop / Naukri)</th>
+                                <th class="p-4 text-indigo-400 font-bold bg-indigo-950/30">TeamUp by ACE</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800 text-slate-300">
+                            <tr>
+                                <td class="p-4 font-bold text-white">Skill Complement Matching</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> "Who is free?" spam</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> Event catalog only</td>
+                                <td class="p-4 text-emerald-300 font-semibold bg-indigo-950/20"><i class="fa-solid fa-check mr-1.5 text-emerald-400"></i> Multi-factor complement-based AI matching (40% skill complement)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-bold text-white">Reliability Signal</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> Zero accountability, high ghosting</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> No post-hackathon peer score</td>
+                                <td class="p-4 text-emerald-300 font-semibold bg-indigo-950/20"><i class="fa-solid fa-check mr-1.5 text-emerald-400"></i> 0-100 peer-rated Reliability Score with verified badges</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-bold text-white">Cross-College Discovery</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> Confined to single campus/batch</td>
+                                <td class="p-4 text-slate-400"><i class="fa-solid fa-minus mr-1.5"></i> Manual invites only</td>
+                                <td class="p-4 text-emerald-300 font-semibold bg-indigo-950/20"><i class="fa-solid fa-check mr-1.5 text-emerald-400"></i> Seamless inter-college search across 10 top universities</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-bold text-white">Team Gap Analyzer</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> Manual guessing in spreadsheets</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> None</td>
+                                <td class="p-4 text-emerald-300 font-semibold bg-indigo-950/20"><i class="fa-solid fa-check mr-1.5 text-emerald-400"></i> Live gap detection + AI suggested candidates to fill gaps</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-bold text-white">Pre-Team Compatibility</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> Clashes during 36-hr crunch</td>
+                                <td class="p-4 text-rose-400"><i class="fa-solid fa-xmark mr-1.5"></i> None</td>
+                                <td class="p-4 text-emerald-300 font-semibold bg-indigo-950/20"><i class="fa-solid fa-check mr-1.5 text-emerald-400"></i> Schedule/Role synergy + 10-Minute Icebreaker Challenge</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3-Step Flow -->
+            <div class="max-w-5xl mx-auto pt-6">
+                <div class="text-center mb-8">
+                    <h3 class="text-xl font-bold text-white">How TeamUp Works</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-card p-6 rounded-2xl relative">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-950 text-indigo-400 flex items-center justify-center font-bold mb-4 border border-indigo-800">1</div>
+                        <h4 class="font-bold text-white text-base">Verified Skill Profile</h4>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">Sign up with your .edu or .ac.in email for instant verification. Declare your skills, proficiencies, work-schedule, and hackathon goals.</p>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl relative">
+                        <div class="w-10 h-10 rounded-xl bg-purple-950 text-purple-400 flex items-center justify-center font-bold mb-4 border border-purple-800">2</div>
+                        <h4 class="font-bold text-white text-base">Complement-Based Matching</h4>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">Our modular engine rewards candidates covering the exact skills you lack for the hackathon. See explainable match % and work-style synergy.</p>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl relative">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold mb-4 border border-emerald-800">3</div>
+                        <h4 class="font-bold text-white text-base">Gap Analyzer & Collaboration</h4>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">Your team dashboard highlights missing roles, crafts an AI team pitch, provides role splits, and facilitates in-app team chat.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. EVENTS DIRECTORY VIEW -->
+        <section id="view-events" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Explore Hackathons</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Select an event to browse complement-matched teammates and open seats.</p>
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="glass-card p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 border-slate-800">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Search Events</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
+                        <input type="text" id="events-search" oninput="filterEvents()" placeholder="Search by name or theme..." class="w-full pl-8 pr-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Theme Filter</label>
+                    <select id="events-theme-filter" onchange="filterEvents()" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="All">All Themes</option>
+                        <option value="FinTech & Open Innovation">FinTech & Open Innovation</option>
+                        <option value="HealthTech">HealthTech</option>
+                        <option value="Web3 & Crypto">Web3 & Crypto</option>
+                        <option value="Smart Cities & IoT">Smart Cities & IoT</option>
+                        <option value="EdTech">EdTech</option>
+                        <option value="ClimateTech & Sustainability">ClimateTech & Sustainability</option>
+                        <option value="CyberSecurity">CyberSecurity</option>
+                        <option value="Open Innovation">Open Innovation</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Mode</label>
+                    <select id="events-mode-filter" onchange="filterEvents()" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="All">All Modes</option>
+                        <option value="Online">Online</option>
+                        <option value="Hybrid">Hybrid</option>
+                        <option value="In-Person">In-Person</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Events Grid -->
+            <div id="events-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <!-- 3. EVENT DETAIL VIEW (TABS: MATCHES, SEATS, TEAMS) -->
+        <section id="view-event-detail" class="hidden space-y-6">
+            <!-- Event Hero Banner -->
+            <div class="glass-card rounded-2xl overflow-hidden border-slate-800">
+                <div class="relative h-48 sm:h-56">
+                    <img id="event-detail-banner" src="" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
+                    <div class="absolute top-4 left-4 flex gap-2">
+                        <button onclick="window.location.hash = '#events'" class="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white text-xs font-semibold backdrop-blur transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-left"></i> All Events
+                        </button>
+                    </div>
+                    <div class="absolute bottom-4 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span id="event-detail-theme" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600 text-white"></span>
+                                <span id="event-detail-mode" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800"></span>
+                            </div>
+                            <h2 id="event-detail-title" class="text-2xl sm:text-3xl font-extrabold text-white"></h2>
+                            <p id="event-detail-tagline" class="text-xs sm:text-sm text-slate-300 max-w-2xl mt-0.5"></p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">Grand Prize Pool</span>
+                            <span id="event-detail-prize" class="text-xl sm:text-2xl font-black text-amber-400"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Quick Info Bar -->
+                <div class="p-4 bg-slate-900/90 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                        <span class="text-slate-400 block">Dates:</span>
+                        <span id="event-detail-dates" class="font-semibold text-white"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block">Venue:</span>
+                        <span id="event-detail-venue" class="font-semibold text-white"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block">Team Size:</span>
+                        <span id="event-detail-teamsize" class="font-semibold text-white"></span>
+                    </div>
+                </div>
+
+                <!-- Required Roles Chips -->
+                <div class="p-4 border-t border-slate-800/60 flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Event Required Roles:</span>
+                    <div id="event-detail-required-roles" class="flex flex-wrap gap-1.5"></div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="border-b border-slate-800 flex items-center justify-between">
+                <div class="flex space-x-6 text-sm font-semibold">
+                    <button class="event-tab-btn py-3 border-b-2 border-indigo-500 text-indigo-400 transition flex items-center gap-2" data-tab="matches" onclick="switchEventTab('matches')">
+                        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> AI Match Feed
+                    </button>
+                    <button class="event-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white transition flex items-center gap-2" data-tab="seats" onclick="switchEventTab('seats')">
+                        <i class="fa-solid fa-chair text-amber-400"></i> Open Seats
+                    </button>
+                    <button class="event-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white transition flex items-center gap-2" data-tab="teams" onclick="switchEventTab('teams')">
+                        <i class="fa-solid fa-user-group text-slate-400"></i> Registered Teams
+                    </button>
+                </div>
+
+                <!-- Tab action button -->
+                <div>
+                    <button onclick="openPostSeatModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-amber-300 border border-amber-500/30 flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-plus text-xs"></i> Post Open Seat
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1 CONTENT: AI MATCH FEED -->
+            <div id="tab-content-matches" class="space-y-4">
+                <!-- Filter Drawer -->
+                <div class="glass-card p-4 rounded-2xl grid grid-cols-2 sm:grid-cols-6 gap-2.5 text-xs">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">College</label>
+                        <select id="match-filter-college" onchange="loadEventMatches()" class="w-full px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700/80 text-white focus:outline-none">
+                            <option value="All">All Colleges</option>
+                            <option value="Maharaja Agrasen Institute of Technology (MAIT)">MAIT Delhi</option>
+                            <option value="IIT Bombay">IIT Bombay</option>
+                            <option value="BITS Pilani">BITS Pilani</option>
+                            <option value="Delhi Technological University (DTU)">DTU Delhi</option>
+                            <option value="Vellore Institute of Technology (VIT)">VIT Vellore</option>
+                            <option value="IIIT Hyderabad">IIIT Hyderabad</option>
+                            <option value="RV College of Engineering (RVCE)">RVCE Bangalore</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">City</label>
+                        <select id="match-filter-city" onchange="loadEventMatches()" class="w-full px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700/80 text-white focus:outline-none">
+                            <option value="All">All Cities</option>
+                            <option value="Delhi">Delhi</option>
+                            <option value="Mumbai">Mumbai</option>
+                            <option value="Bangalore">Bangalore</option>
+                            <option value="Hyderabad">Hyderabad</option>
+                            <option value="Pilani">Pilani</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Specific Skill</label>
+                        <select id="match-filter-skill" onchange="loadEventMatches()" class="w-full px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700/80 text-white focus:outline-none">
+                            <option value="All">Any Skill</option>
+                            <option value="Machine Learning">Machine Learning</option>
+                            <option value="UI/UX Design">UI/UX Design</option>
+                            <option value="Backend">Backend</option>
+                            <option value="Frontend">Frontend</option>
+                            <option value="PPT/Pitching">PPT/Pitching</option>
+                            <option value="Cybersecurity">Cybersecurity</option>
+                            <option value="App Dev">App Dev</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Experience</label>
+                        <select id="match-filter-experience" onchange="loadEventMatches()" class="w-full px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700/80 text-white focus:outline-none">
+                            <option value="All">Any Experience</option>
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Availability</label>
+                        <select id="match-filter-availability" onchange="loadEventMatches()" class="w-full px-2.5 py-1.5 bg-slate-900 rounded-lg border border-slate-700/80 text-white focus:outline-none">
+                            <option value="All">Any Schedule</option>
+                            <option value="Weekends">Weekends</option>
+                            <option value="Weekdays">Weekdays</option>
+                            <option value="Evenings">Evenings</option>
+                            <option value="Full-time / Flexible">Flexible</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center pt-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="match-filter-mentor" onchange="loadEventMatches()" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0">
+                            <span class="text-[11px] font-semibold text-purple-300">Mentors Only</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Matches Cards Container -->
+                <div id="matches-grid" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+            </div>
+
+            <!-- TAB 2 CONTENT: OPEN SEATS -->
+            <div id="tab-content-seats" class="hidden space-y-4">
+                <div id="seats-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+            </div>
+
+            <!-- TAB 3 CONTENT: REGISTERED TEAMS -->
+            <div id="tab-content-teams" class="hidden space-y-4">
+                <div id="teams-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+            </div>
+        </section>
+
+        <!-- 4. TEAM DASHBOARD & GAP ANALYZER VIEW -->
+        <section id="view-team-dashboard" class="hidden space-y-6">
+            <!-- Team Header -->
+            <div class="glass-card rounded-2xl p-6 border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800">Team Workspace</span>
+                        <span id="team-dash-event" class="text-xs text-slate-400"></span>
+                    </div>
+                    <h2 id="team-dash-name" class="text-2xl sm:text-3xl font-black text-white"></h2>
+                    <p id="team-dash-tagline" class="text-xs text-slate-300 mt-1"></p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="openPostSeatModal()" class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-chair text-amber-400"></i> Post Open Seat
+                    </button>
+                    <button onclick="window.location.hash = '#events'" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">
+                        Back to Events
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2-Column Layout: Left (Gap Analyzer, Pitch, Role Split) | Right (Members & In-App Chat) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- LEFT 2 COLS: Team Gap Analyzer & AI Hook -->
+                <div class="lg:col-span-2 space-y-6">
+
+                    <!-- TEAM GAP ANALYZER (CORE HIGHLIGHT) -->
+                    <div class="glass-card rounded-2xl p-6 border-indigo-900/50 glow-primary">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-puzzle-piece"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-extrabold text-white text-base">Team Gap Analyzer</h3>
+                                    <p class="text-xs text-slate-400">Compares team skills against event requirements</p>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800">
+                                Live Analysis
+                            </span>
+                        </div>
+
+                        <div id="team-gap-analyzer-content"></div>
+                    </div>
+
+                    <!-- AI-Generated Team Pitch -->
+                    <div class="glass-card rounded-2xl p-5 border-slate-800">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-bullhorn"></i> AI-Generated 60-Second Team Pitch Hook
+                            </span>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-sm font-medium text-slate-200 italic" id="team-dash-pitch"></div>
+                    </div>
+
+                    <!-- Suggested Role Split -->
+                    <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-sitemap text-indigo-400"></i> Suggested Division of Labor
+                            </span>
+                            <span class="text-[11px] text-slate-400">Optimized for 36-hr sprint</span>
+                        </div>
+                        <div id="team-role-split-list" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- RIGHT 1 COL: Team Members & Real-time Chat -->
+                <div class="space-y-6">
+                    <!-- Members Card -->
+                    <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+                        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-users text-indigo-400"></i> Team Roster
+                        </h4>
+                        <div id="team-members-list" class="space-y-2.5"></div>
+                    </div>
+
+                    <!-- In-App Team Chat -->
+                    <div class="glass-card rounded-2xl p-5 border-slate-800 flex flex-col h-[400px]">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-comments text-indigo-400"></i> In-App Team Chat
+                            </h4>
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Live connection"></span>
+                        </div>
+
+                        <!-- Chat Messages Scrollable -->
+                        <div id="team-chat-messages" class="flex-1 overflow-y-auto py-3 space-y-3 pr-1"></div>
+
+                        <!-- Chat Input Form -->
+                        <form onsubmit="handleSendTeamMessage(event)" class="pt-2 border-t border-slate-800 flex gap-2">
+                            <input type="text" id="team-chat-input" placeholder="Type a message to teammates..." class="flex-1 px-3 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            <button type="submit" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. MY TEAMS VIEW -->
+        <section id="view-my-teams" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">My Teams & Dashboards</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Manage team members, analyze gaps, and chat with your hackathon squads.</p>
+                </div>
+            </div>
+            <div id="my-teams-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800/80 py-8 bg-slate-950/60 mt-12 text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-white">{{ app_name }}</span>
+                <span>•</span>
+                <span>AllCollegeEvent.com (ACE) Prototype</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="/docs" target="_blank" class="hover:text-indigo-400 transition flex items-center gap-1">
+                    <i class="fa-solid fa-code text-xs"></i> Swagger API Docs
+                </a>
+                <a href="/redoc" target="_blank" class="hover:text-indigo-400 transition">ReDoc</a>
+                <button onclick="loginDemoUser()" class="hover:text-amber-400 text-amber-300 font-semibold transition">
+                    Instant Demo Login
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODALS CONTAINER -->
+
+    <!-- 1. AUTH MODAL (LOGIN / SIGNUP) -->
+    <div id="auth-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 border-slate-800 relative space-y-5">
+            <button onclick="closeModal('auth-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-center">
+                <h3 class="text-xl font-bold text-white">Sign In to TeamUp</h3>
+                <p class="text-xs text-slate-400 mt-1">Connect with complement-matched hackathon teammates</p>
+            </div>
+
+            <!-- Login / Signup Form Toggles -->
+            <div class="flex border-b border-slate-800 text-xs font-semibold">
+                <button id="auth-tab-login" onclick="toggleAuthTab('login')" class="flex-1 py-2 text-indigo-400 border-b-2 border-indigo-500">Sign In</button>
+                <button id="auth-tab-signup" onclick="toggleAuthTab('signup')" class="flex-1 py-2 text-slate-400 border-b-2 border-transparent hover:text-white">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">College or Personal Email</label>
+                    <input type="email" id="login-email" required placeholder="e.g. demo@mait.ac.in" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition">
+                    Sign In
+                </button>
+                <div class="pt-2 text-center">
+                    <button type="button" onclick="loginDemoUser()" class="text-xs text-amber-300 font-semibold hover:underline">
+                        ⚡ Or sign in instantly with Demo Account (Aarav - MAIT)
+                    </button>
+                </div>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="form-signup" onsubmit="handleSignup(event)" class="hidden space-y-3">
+                <div class="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-800/60 text-[11px] text-indigo-300">
+                    <i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Use your <strong>.edu, .ac.in, or .edu.in</strong> email to get an automatic Verified College Student badge!
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Full Name</label>
+                    <input type="text" id="signup-name" required placeholder="Aarav Sharma" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Email</label>
+                    <input type="email" id="signup-email" required placeholder="student@college.ac.in" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Password</label>
+                    <input type="password" id="signup-password" required placeholder="At least 6 characters" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">College Name</label>
+                        <input type="text" id="signup-college" required placeholder="MAIT, Delhi" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">City</label>
+                        <input type="text" id="signup-city" required placeholder="Delhi" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Academic Year</label>
+                    <input type="text" id="signup-year" placeholder="3rd Year B.Tech" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700/80 text-xs text-white">
+                </div>
+                <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition">
+                    Create Account & Get Verified
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. SEND INVITE MODAL -->
+    <div id="invite-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 border-slate-800 relative space-y-4">
+            <button onclick="closeModal('invite-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-user-plus text-indigo-400"></i> Invite Teammate
+            </h3>
+            <p class="text-xs text-slate-400">Send an invitation to <strong id="invite-receiver-name" class="text-white"></strong></p>
+
+            <form onsubmit="handleSendInvite(event)" class="space-y-3">
+                <input type="hidden" id="invite-receiver-id">
+                <input type="hidden" id="invite-event-id">
+                <input type="hidden" id="invite-team-id">
+
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Proposed Role</label>
+                    <input type="text" id="invite-role" required placeholder="e.g. Lead ML Engineer / UI/UX Designer" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Personal Note / Pitch</label>
+                    <textarea id="invite-message" rows="3" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white" placeholder="Hey! Your profile complements our stack perfectly for this event. Let's build together!"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('invite-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-300 hover:bg-slate-700 transition">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition">Send Invite</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. POST OPEN SEAT MODAL -->
+    <div id="post-seat-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 border-slate-800 relative space-y-4">
+            <button onclick="closeModal('post-seat-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chair text-amber-400"></i> Post an Open Seat
+            </h3>
+            <p class="text-xs text-slate-400">Attract specialized teammates for your squad.</p>
+
+            <form onsubmit="handlePostSeat(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Role Title</label>
+                    <input type="text" id="seat-role-title" required placeholder="e.g. Lead UI/UX Designer" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Required Skills (comma separated)</label>
+                    <input type="text" id="seat-skills" required placeholder="e.g. UI/UX Design, React, Figma" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Short Description of Needs</label>
+                    <textarea id="seat-note" rows="3" class="w-full px-3.5 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white" placeholder="Looking for someone to design high-impact pitch deck wireframes and client UI..."></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('post-seat-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-300 hover:bg-slate-700 transition">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition">Post to Board</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. 10-MIN ICEBREAKER CHALLENGE MODAL -->
+    <div id="icebreaker-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 border-indigo-900/60 relative space-y-5 glow-primary max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('icebreaker-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <!-- Header & Timer -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <img id="icebreaker-partner-avatar" src="" class="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs uppercase font-bold text-indigo-400">10-Minute Collaborative Challenge</span>
+                        </div>
+                        <h3 class="text-base font-extrabold text-white">
+                            TeamUp Icebreaker with <span id="icebreaker-partner-name"></span>
+                        </h3>
+                        <p class="text-xs text-slate-400" id="icebreaker-partner-college"></p>
+                    </div>
+                </div>
+
+                <!-- Live Countdown Timer -->
+                <div class="text-right flex items-center gap-2 self-start sm:self-auto bg-slate-900 px-3.5 py-1.5 rounded-xl border border-indigo-900/60">
+                    <i class="fa-solid fa-stopwatch text-indigo-400 text-sm"></i>
+                    <span id="icebreaker-timer" class="text-lg font-mono font-bold text-indigo-300">10:00</span>
+                </div>
+            </div>
+
+            <!-- Workstyle Compatibility Breakdown -->
+            <div class="p-4 rounded-xl bg-indigo-950/40 border border-indigo-800/50 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-handshake-simple"></i> Work-Style Compatibility Breakdown
+                    </span>
+                    <span id="icebreaker-compat-score" class="text-xs font-bold text-emerald-400"></span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div class="p-2 rounded bg-slate-900/60 border border-slate-800">
+                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Role Synergy:</span>
+                        <span id="icebreaker-compat-role" class="text-slate-200"></span>
+                    </div>
+                    <div class="p-2 rounded bg-slate-900/60 border border-slate-800">
+                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Sprint Schedule:</span>
+                        <span id="icebreaker-compat-sched" class="text-slate-200"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini-Task Prompt -->
+            <div class="space-y-3">
+                <h4 id="icebreaker-task-title" class="text-base font-bold text-amber-300"></h4>
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
+                    <p><strong class="text-slate-200">Scenario:</strong> <span id="icebreaker-task-scenario" class="text-slate-300"></span></p>
+                    <p><strong class="text-slate-200">Challenge:</strong> <span id="icebreaker-task-instruction" class="text-slate-300"></span></p>
+                    <p class="text-indigo-400 font-medium"><i class="fa-solid fa-flag-checkered mr-1"></i> Deliverable: <span id="icebreaker-task-deliverable"></span></p>
+                </div>
+            </div>
+
+            <!-- Collaborative Scratchpad -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Collaborative Brainstorm Scratchpad:</span>
+                    <span class="text-[10px] text-slate-500">Draft ideas live</span>
+                </label>
+                <textarea rows="4" class="w-full px-3.5 py-2.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500" placeholder="Jot down MVP scope, architecture diagram notes, or tech stack decisions here..."></textarea>
+            </div>
+
+            <!-- Footer Action -->
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                <span class="text-xs text-slate-400">Ready to build? Send an invite!</span>
+                <button id="icebreaker-invite-btn" class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-user-plus"></i> Form Team Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. PEER FEEDBACK MODAL -->
+    <div id="feedback-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 border-slate-800 relative space-y-4">
+            <button onclick="closeModal('feedback-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-star text-amber-400"></i> Post-Event Peer Feedback
+            </h3>
+            <p class="text-xs text-slate-400">Rate <strong id="feedback-target-name" class="text-white"></strong> to update their public Reliability Score.</p>
+
+            <form onsubmit="handleSubmitFeedback(event)" class="space-y-4">
+                <input type="hidden" id="feedback-team-id">
+                <input type="hidden" id="feedback-event-id">
+                <input type="hidden" id="feedback-target-user-id">
+
+                <!-- Star Rating -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">Overall Collaboration Rating (1 - 5 Stars):</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="feedback-rating" value="5" checked class="text-indigo-600"> 5 ⭐ Excellent</label>
+                        <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="feedback-rating" value="4" class="text-indigo-600"> 4 ⭐</label>
+                        <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="feedback-rating" value="3" class="text-indigo-600"> 3 ⭐</label>
+                    </div>
+                </div>
+
+                <!-- Peer Tags -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">Recognition Tags:</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <label class="flex items-center gap-1.5"><input type="checkbox" name="feedback-tags" value="Reliable" checked> Reliable</label>
+                        <label class="flex items-center gap-1.5"><input type="checkbox" name="feedback-tags" value="Great communicator" checked> Great communicator</label>
+                        <label class="flex items-center gap-1.5"><input type="checkbox" name="feedback-tags" value="Technical wizard"> Technical wizard</label>
+                        <label class="flex items-center gap-1.5"><input type="checkbox" name="feedback-tags" value="Deadlines keeper"> Deadlines keeper</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Review Comment (Optional)</label>
+                    <textarea id="feedback-comment" rows="2" class="w-full px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white" placeholder="Great teammate, wrote clean code and delivered the presentation smoothly..."></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('feedback-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-300 hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs">Submit Rating</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6. INVITES MODAL (RECEIVED & SENT) -->
+    <div id="invites-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-6 border-slate-800 relative space-y-4 max-h-[85vh] flex flex-col">
+            <button onclick="closeModal('invites-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-envelope text-indigo-400"></i> Team Invitations & Requests
+            </h3>
+            <div id="invites-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        </div>
+    </div>
+
+    <!-- 7. PROFILE EDIT MODAL -->
+    <div id="profile-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 border-slate-800 relative space-y-5 max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('profile-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-id-card text-indigo-400"></i> Edit Your Skill Profile
+            </h3>
+
+            <form onsubmit="handleProfileSave(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Full Name</label>
+                        <input type="text" id="profile-edit-name" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">College</label>
+                        <input type="text" id="profile-edit-college" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">City</label>
+                        <input type="text" id="profile-edit-city" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Year</label>
+                        <input type="text" id="profile-edit-year" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Experience Level</label>
+                        <select id="profile-edit-exp" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Short Bio</label>
+                    <textarea id="profile-edit-bio" rows="2" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Skills & Proficiency (e.g. "Python (Advanced), UI/UX Design (Intermediate)")</label>
+                    <input type="text" id="profile-edit-skills" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Domains / Interests (comma separated)</label>
+                    <input type="text" id="profile-edit-interests" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                </div>
+
+                <!-- Availability & Goal -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Availability</label>
+                        <select id="profile-edit-avail" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Weekends">Weekends</option>
+                            <option value="Weekdays">Weekdays</option>
+                            <option value="Evenings">Evenings</option>
+                            <option value="Full-time / Flexible">Full-time / Flexible</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Goal</label>
+                        <select id="profile-edit-goal" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Win Grand Prize">Win Grand Prize</option>
+                            <option value="Learn & Build Skills">Learn & Build Skills</option>
+                            <option value="Network & Have Fun">Network & Have Fun</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Past Hackathons</label>
+                        <input type="number" id="profile-edit-past-hackathons" min="0" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                    </div>
+                </div>
+
+                <!-- Work Style Preferences -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Schedule</label>
+                        <select id="profile-edit-schedule" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Night Owl">Night Owl</option>
+                            <option value="Early Bird">Early Bird</option>
+                            <option value="Flexible">Flexible</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Role Preference</label>
+                        <select id="profile-edit-role" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Executor / Builder">Executor / Builder</option>
+                            <option value="Leader / Coordinator">Leader / Coordinator</option>
+                            <option value="Strategist / Ideator">Strategist / Ideator</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Sprint Vibe</label>
+                        <select id="profile-edit-vibe" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                            <option value="Competitive / Serious">Competitive / Serious</option>
+                            <option value="Balanced">Balanced</option>
+                            <option value="Casual / Experimental">Casual / Experimental</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Mentor Modes -->
+                <div class="flex items-center gap-6 pt-2">
+                    <label class="flex items-center gap-2 text-xs text-purple-300 cursor-pointer">
+                        <input type="checkbox" id="profile-edit-mentor" class="rounded text-indigo-600"> Opt-in as Mentor
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-blue-300 cursor-pointer">
+                        <input type="checkbox" id="profile-edit-seeking-mentor" class="rounded text-indigo-600"> Seeking a Mentor
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('profile-modal')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-300 hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 8. PUBLIC PROFILE MODAL (READ-ONLY) -->
+    <div id="public-profile-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 border-slate-800 relative space-y-4">
+            <button onclick="closeModal('public-profile-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="flex items-start gap-3">
+                <img id="pub-profile-avatar" src="" class="w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700">
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <h3 id="pub-profile-name" class="text-lg font-bold text-white"></h3>
+                        <span id="pub-profile-verified" class="hidden text-emerald-400 text-xs"><i class="fa-solid fa-circle-check"></i></span>
+                    </div>
+                    <p id="pub-profile-college" class="text-xs text-slate-400"></p>
+                    <p id="pub-profile-city" class="text-[11px] text-slate-500"></p>
+                </div>
+            </div>
+
+            <p id="pub-profile-bio" class="text-xs text-slate-300 italic"></p>
+
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+                <span class="text-slate-400">Reliability Score:</span>
+                <span id="pub-profile-score" class="font-bold text-emerald-400"></span>
+            </div>
+
+            <div>
+                <p class="text-xs font-semibold text-slate-400 mb-1.5">Skills:</p>
+                <div id="pub-profile-skills" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <div>
+                <p class="text-xs font-semibold text-slate-400 mb-1.5">Interests:</p>
+                <div id="pub-profile-interests" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                <button id="pub-profile-report-btn" class="text-xs text-rose-400 hover:underline">Report User</button>
+                <div class="flex gap-2">
+                    <button id="pub-profile-icebreaker-btn" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs text-indigo-300 font-medium">Icebreaker</button>
+                    <button id="pub-profile-invite-btn" class="px-4 py-1.5 rounded-xl bg-indigo-600 text-xs text-white font-semibold">Invite</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. REPORT MODAL -->
+    <div id="report-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="glass-panel w-full max-w-sm rounded-2xl p-6 border-slate-800 relative space-y-4">
+            <button onclick="closeModal('report-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-base font-bold text-rose-400 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation"></i> Report User
+            </h3>
+            <p class="text-xs text-slate-400">Reporting <span id="report-user-name" class="text-white font-semibold"></span></p>
+
+            <form onsubmit="handleReportSubmit(event)" class="space-y-3">
+                <input type="hidden" id="report-user-id">
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Reason</label>
+                    <select id="report-reason" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white">
+                        <option value="Ghosting / Inactive">Ghosting / Inactive after joining</option>
+                        <option value="Spam / Unsolicited Promotion">Spam / Unsolicited Promotion</option>
+                        <option value="Harassment / Inappropriate Behavior">Harassment / Inappropriate Behavior</option>
+                        <option value="Fake Credentials">Fake Credentials</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Details (Optional)</label>
+                    <textarea id="report-details" rows="2" class="w-full px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-700 text-xs text-white" placeholder="Provide extra context for moderators..."></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('report-modal')" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs text-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs">Submit Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+    <!-- SCRIPT INCLUSION -->
+    <script src="/static/js/app.js"></script>
+    <script>
+        function toggleAuthTab(tab) {
+            const isLogin = tab === 'login';
+            document.getElementById('form-login').classList.toggle('hidden', !isLogin);
+            document.getElementById('form-signup').classList.toggle('hidden', isLogin);
+            document.getElementById('auth-tab-login').classList.toggle('text-indigo-400', isLogin);
+            document.getElementById('auth-tab-login').classList.toggle('border-indigo-500', isLogin);
+            document.getElementById('auth-tab-login').classList.toggle('text-slate-400', !isLogin);
+            document.getElementById('auth-tab-login').classList.toggle('border-transparent', !isLogin);
+
+            document.getElementById('auth-tab-signup').classList.toggle('text-indigo-400', !isLogin);
+            document.getElementById('auth-tab-signup').classList.toggle('border-indigo-500', !isLogin);
+            document.getElementById('auth-tab-signup').classList.toggle('text-slate-400', isLogin);
+            document.getElementById('auth-tab-signup').classList.toggle('border-transparent', isLogin);
+        }
+    </script>
+</body>
+</html>
