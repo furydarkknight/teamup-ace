@@ -1699,7 +1699,6 @@ async function handleProfileSave(e) {
         showToast(err.message, 'error');
     }
 }
-}
 
 async function openPublicProfileModal(userId) {
     try {
