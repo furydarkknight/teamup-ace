@@ -2284,27 +2284,6 @@ function renderBrowseTeamsList(data) {
     }).join('');
 }
 
-                    <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
-                        <span><i class="fa-solid fa-clock mr-1 text-slate-500"></i>${team.availability}</span>
-                        <span><i class="fa-solid fa-users mr-1 text-slate-500"></i>${team.current_team_size}/${totalSlots} members</span>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between pt-3 border-t border-slate-800 gap-2">
-                    <button onclick="navigateToTeam(${team.id})" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition font-medium">
-                        View Team
-                    </button>
-                    ${team.vacancies > 0 ? `
-                        <button onclick="requestJoinTeam(${team.id})" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1">
-                            <i class="fa-solid fa-user-plus text-[10px]"></i> Join Team
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
 async function requestJoinTeam(teamId) {
     if (!state.token) {
         showToast('Please sign in or use Demo Login to apply.', 'warning');
