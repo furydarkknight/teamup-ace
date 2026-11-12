@@ -224,8 +224,21 @@ else:
 _hdr(7, "Different users get different recommendations")
 # user A = demo
 recs_a = client.get("/api/me/recommended-teams?per_page=5", headers=auth_headers(demo_token) if demo_token else {})
-# user B = newly signed up gmail user
-tok_b = login(gmail) if 'gmail' in dir() else None
+# user B = newly signed up user with distinct design skills & interests
+email_b = f"designer_{_rnd()}@gmail.com"
+client.post("/api/auth/signup", json={
+    "name": "Designer B",
+    "email": email_b,
+    "password": "Test@1234",
+    "college": "Design College",
+    "experience_level": "Advanced",
+    "skills": ["UI/UX Design", "Figma", "Frontend (React/Vue/Web)"],
+    "skill_proficiency": {"UI/UX Design": 5, "Figma": 5, "Frontend (React/Vue/Web)": 4},
+    "interests": ["Design Systems", "Product Design"],
+    "preferred_roles": ["UI/UX Design"],
+    "availability": "Part-time"
+})
+tok_b = login(email_b)
 recs_b = client.get("/api/me/recommended-teams?per_page=5", headers=auth_headers(tok_b) if tok_b else {}) if tok_b else None
 
 _ok("User A recommendations -> 200", recs_a.status_code == 200, recs_a.text[:200])
